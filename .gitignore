@@ -1,0 +1,26 @@
+node_modules/
+dist/
+release/
+*.log
+.DS_Store
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# TypeScript and local build artifacts
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Editor and OS files
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
