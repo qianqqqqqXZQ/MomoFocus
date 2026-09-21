@@ -31,16 +31,24 @@
   "build": {
     "appId": "com.momofocus.app",
     "productName": "番茄小窝",
+    "electronDist": "node_modules/electron/dist",
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "assets/**/*",
       "package.json"
     ],
     "directories": {
       "output": "release"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "assets/tomato.ico"
+    },
+    "nsis": {
+      "shortcutName": "番茄小窝",
+      "installerIcon": "assets/tomato.ico",
+      "uninstallerIcon": "assets/tomato.ico"
     }
   }
 }
