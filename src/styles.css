@@ -60,19 +60,23 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .central-task-state h2 { font-size: 29px; line-height: 1.35; margin: 17px 0 12px; letter-spacing: 0; }
 .central-task-state h2 em { color: var(--red); font-style: normal; }
 .central-task-state > p { color: var(--muted); font-size: 12px; line-height: 1.8; margin: 0 0 28px; }
-.central-task-list { border-top: 1px solid var(--line); margin: 24px 0 20px; }
-.central-task-row { width: 100%; display: flex; align-items: center; gap: 11px; padding: 15px 0; background: transparent; border-bottom: 1px solid var(--line); text-align: left; }
-.central-task-row:hover { background: rgba(255,255,255,.35); }
+.central-task-list { margin: 24px 0 20px; display: grid; gap: 10px; }
+.central-task-row { width: 100%; display: flex; align-items: center; gap: 11px; padding: 15px; border: 1px solid transparent; border-radius: 12px; box-shadow: 0 3px 10px rgba(92,82,66,.06); text-align: left; transition: background .2s, border-color .2s, transform .2s, box-shadow .2s; }
+.central-task-row:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(92,82,66,.1); }
+.central-task-row.task-color-0 { background: #edf5f9; border-color: #d9e8f0; }
+.central-task-row.task-color-1 { background: #fbf5df; border-color: #f0e3b8; }
+.central-task-row.task-color-2 { background: #edf6f0; border-color: #d8e9de; }
+.central-task-row.task-color-3 { background: #fdf0ee; border-color: #f1d9d5; }
+.central-task-row.task-color-0:hover { background: #e5f1f7; }
+.central-task-row.task-color-1:hover { background: #f8efcf; }
+.central-task-row.task-color-2:hover { background: #e4f1e9; }
+.central-task-row.task-color-3:hover { background: #fae7e4; }
 .central-task-row > span:nth-child(2) { min-width: 0; flex: 1; }
 .central-task-row b, .central-task-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .central-task-row b { font-size: 13px; font-weight: 600; }
 .central-task-row small { color: var(--muted); font: 10px 'DM Mono', monospace; margin-top: 5px; }
 .central-task-row svg { color: var(--muted); transform: rotate(-90deg); }
-.central-task-mark { width: 9px; height: 9px; border: 2px solid; border-radius: 50%; flex: 0 0 auto; }
-.central-task-mark.task-color-0 { border-color: #9bbbd4; }
-.central-task-mark.task-color-1 { border-color: #e4c477; }
-.central-task-mark.task-color-2 { border-color: #9bc3ad; }
-.central-task-mark.task-color-3 { border-color: #dfa09a; }
+.central-task-mark { width: 9px; height: 9px; border: 2px solid rgba(95,91,81,.35); border-radius: 50%; flex: 0 0 auto; }
 .new-task-button { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border: 1px dashed #d4cbbd; background: rgba(255,255,255,.25); color: var(--red); font-size: 12px; transition: background .2s, border .2s; }
 .new-task-button:hover { background: rgba(255,255,255,.58); border-color: var(--red); }
 .new-task-fields { display: grid; gap: 8px; }
@@ -87,6 +91,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .list-add-task:hover { color: var(--red-dark); }
 .focus-panel.has-selection .timer-controls { margin-top: 10px; }
 .focus-panel.has-selection { min-width: 0; }
+.exit-task-button { display: inline-flex; align-items: center; gap: 4px; padding: 3px 0; background: transparent; color: var(--muted); font-size: 10px; text-transform: none; letter-spacing: 0; }
+.exit-task-button:hover { color: var(--red); }
 .view-tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--line); margin-bottom: 30px; }
 .view-tabs button { display: flex; align-items: center; gap: 7px; padding: 0 0 12px; background: transparent; color: var(--muted); border-bottom: 2px solid transparent; font-size: 12px; }
 .view-tabs button.active { color: var(--red); border-color: var(--red); font-weight: 700; }
