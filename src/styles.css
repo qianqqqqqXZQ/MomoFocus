@@ -68,7 +68,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px
 .central-task-row b { font-size: 13px; font-weight: 600; }
 .central-task-row small { color: var(--muted); font: 10px 'DM Mono', monospace; margin-top: 5px; }
 .central-task-row svg { color: var(--muted); transform: rotate(-90deg); }
-.central-task-mark { width: 9px; height: 9px; border: 2px solid var(--red); border-radius: 50%; flex: 0 0 auto; }
+.central-task-mark { width: 9px; height: 9px; border: 2px solid; border-radius: 50%; flex: 0 0 auto; }
+.central-task-mark.task-color-0 { border-color: #9bbbd4; }
+.central-task-mark.task-color-1 { border-color: #e4c477; }
+.central-task-mark.task-color-2 { border-color: #9bc3ad; }
+.central-task-mark.task-color-3 { border-color: #dfa09a; }
 .new-task-button { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border: 1px dashed #d4cbbd; background: rgba(255,255,255,.25); color: var(--red); font-size: 12px; transition: background .2s, border .2s; }
 .new-task-button:hover { background: rgba(255,255,255,.58); border-color: var(--red); }
 .new-task-fields { display: grid; gap: 8px; }
