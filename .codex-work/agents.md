@@ -14,6 +14,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 ## 当前功能约定
 
 - 右侧面板默认显示 `Todo`，可切换到 `备忘录`。
+- Todo 支持点击选中并记录专属想法；想法保存在对应 Todo 的 `thoughts` 字段中，兼容没有该字段的旧数据。
 - 备忘录支持标题、纯文本正文、多篇列表、自动保存和直接删除。
 - `localStorage` keys：`momofocus.todos`、`momofocus.notes`、`momofocus.tasks`、`momofocus.sessions`。
 - localStorage 读取失败或数据结构异常时回退到默认数据；存储写入失败不会阻塞内存中的界面操作。
@@ -37,3 +38,4 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-22：`npm run build` 通过。
 - 2026-09-22：`git diff --check` 通过。
 - 2026-09-22：Vite 开发页面启动成功，动态日期和首页交互入口可见。
+- 2026-09-22：Todo 专属想法记录功能构建通过，`git diff --check` 通过；旧 Todo 数据兼容为空想法列表。

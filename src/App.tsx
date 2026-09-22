@@ -40,7 +40,13 @@ type FocusTask = {
   done: boolean;
   type: TaskType;
 };
-type Todo = { id: number; text: string; done: boolean };
+type TodoThought = { id: number; text: string; createdAt: string };
+type Todo = {
+  id: number;
+  text: string;
+  done: boolean;
+  thoughts?: TodoThought[];
+};
 type Note = { id: number; text: string; createdAt: string };
 type MemoNote = {
   id: number;
@@ -131,6 +137,16 @@ const writeStorage = (key: string, value: unknown) => {
 };
 const nextId = () => Date.now() * 1000 + Math.floor(Math.random() * 1000);
 const isArray = <T,>(value: unknown): value is T[] => Array.isArray(value);
+const isTodoThoughtArray = (value: unknown): value is TodoThought[] =>
+  Array.isArray(value) &&
+  value.every(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      typeof (item as TodoThought).id === "number" &&
+      typeof (item as TodoThought).text === "string" &&
+      typeof (item as TodoThought).createdAt === "string",
+  );
 const isTodoArray = (value: unknown): value is Todo[] =>
   Array.isArray(value) &&
   value.every(
@@ -139,7 +155,9 @@ const isTodoArray = (value: unknown): value is Todo[] =>
       typeof item === "object" &&
       typeof (item as Todo).id === "number" &&
       typeof (item as Todo).text === "string" &&
-      typeof (item as Todo).done === "boolean",
+      typeof (item as Todo).done === "boolean" &&
+      ((item as Todo).thoughts === undefined ||
+        isTodoThoughtArray((item as Todo).thoughts)),
   );
 const isMemoArray = (value: unknown): value is MemoNote[] =>
   Array.isArray(value) &&
@@ -1126,12 +1144,6 @@ function TimerView(props: TimerViewProps) {
             setMemoNotes={setMemoNotes}
             rightPanelView={rightPanelView}
             setRightPanelView={setRightPanelView}
-            notes={notes}
-            noteInput={noteInput}
-            setNoteInput={setNoteInput}
-            addNote={addNote}
-            expandedNote={expandedNote}
-            setExpandedNote={setExpandedNote}
           />
           <section className="content-panel todo-panel legacy-panel">
             <div className="section-title-row">
@@ -1240,12 +1252,6 @@ function RightPanel({
   setMemoNotes,
   rightPanelView,
   setRightPanelView,
-  notes,
-  noteInput,
-  setNoteInput,
-  addNote,
-  expandedNote,
-  setExpandedNote,
 }: {
   todos: Todo[];
   setTodos: Dispatch<SetStateAction<Todo[]>>;
@@ -1256,16 +1262,14 @@ function RightPanel({
   setMemoNotes: Dispatch<SetStateAction<MemoNote[]>>;
   rightPanelView: RightPanelView;
   setRightPanelView: Dispatch<SetStateAction<RightPanelView>>;
-  notes: Note[];
-  noteInput: string;
-  setNoteInput: Dispatch<SetStateAction<string>>;
-  addNote: () => void;
-  expandedNote: number | null;
-  setExpandedNote: Dispatch<SetStateAction<number | null>>;
 }) {
+  const [selectedTodoId, setSelectedTodoId] = useState<number | null>(null);
+  const [thoughtInput, setThoughtInput] = useState("");
   const [selectedMemoId, setSelectedMemoId] = useState<number | null>(
     memoNotes[0]?.id ?? null,
   );
+  const selectedTodo =
+    todos.find((todo) => todo.id === selectedTodoId) ?? null;
   const selectedMemo =
     memoNotes.find((note) => note.id === selectedMemoId) ?? null;
 
@@ -1277,6 +1281,15 @@ function RightPanel({
       return;
     setSelectedMemoId(memoNotes[0]?.id ?? null);
   }, [memoNotes, selectedMemoId]);
+
+  useEffect(() => {
+    if (
+      selectedTodoId !== null &&
+      todos.some((todo) => todo.id === selectedTodoId)
+    )
+      return;
+    setSelectedTodoId(todos[0]?.id ?? null);
+  }, [selectedTodoId, todos]);
 
   const createMemo = () => {
     const now = new Date().toISOString();
@@ -1321,6 +1334,27 @@ function RightPanel({
       day: "numeric",
     });
   };
+  const selectTodo = (todo: Todo) => {
+    setSelectedTodoId(todo.id);
+    setThoughtInput("");
+  };
+  const addTodoThought = () => {
+    const text = thoughtInput.trim();
+    if (!selectedTodo || !text) return;
+    const thought = {
+      id: nextId(),
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    setTodos((items) =>
+      items.map((todo) =>
+        todo.id === selectedTodo.id
+          ? { ...todo, thoughts: [thought, ...(todo.thoughts ?? [])] }
+          : todo,
+      ),
+    );
+    setThoughtInput("");
+  };
 
   return (
     <section className="content-panel right-panel">
@@ -1358,35 +1392,49 @@ function RightPanel({
           <div className="task-list todo-list">
             {todos.map((todo) => (
               <div
-                className={`task-row ${todo.done ? "is-done" : ""}`}
+                className={`task-row todo-row ${todo.done ? "is-done" : ""} ${selectedTodoId === todo.id ? "is-selected" : ""}`}
                 key={todo.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => selectTodo(todo)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    selectTodo(todo);
+                  }
+                }}
               >
                 <button
                   className="check-button"
                   aria-label={
                     todo.done ? `标记${todo.text}为未完成` : `完成${todo.text}`
                   }
-                  onClick={() =>
+                  onClick={(event) => {
+                    event.stopPropagation();
                     setTodos((items) =>
                       items.map((item) =>
                         item.id === todo.id
                           ? { ...item, done: !item.done }
                           : item,
                       ),
-                    )
-                  }
+                    );
+                  }}
                 >
                   {todo.done && <Check size={14} />}
                 </button>
-                <span className="task-text">{todo.text}</span>
+                <span className="task-text">
+                  {todo.text}
+                  <small>{(todo.thoughts ?? []).length} 条想法</small>
+                </span>
                 <button
                   className="delete-button"
                   aria-label={`删除${todo.text}`}
-                  onClick={() =>
+                  onClick={(event) => {
+                    event.stopPropagation();
                     setTodos((items) =>
                       items.filter((item) => item.id !== todo.id),
                     )
-                  }
+                  }}
                 >
                   <Trash2 size={15} />
                 </button>
@@ -1406,32 +1454,43 @@ function RightPanel({
             />
           </div>
           <div className="notes-divider">
-            <span>快速记录</span>
+            <span>
+              {selectedTodo ? `${selectedTodo.text} 的想法` : "Todo 想法"}
+            </span>
             <i />
           </div>
-          <div className="quick-note">
+          <div className="quick-note todo-thought-editor">
             <textarea
-              value={noteInput}
-              onChange={(event) => setNoteInput(event.target.value)}
-              placeholder="此刻有什么想法？写下来就好..."
-              aria-label="快速记录"
+              value={thoughtInput}
+              onChange={(event) => setThoughtInput(event.target.value)}
+              onKeyDown={(event) => {
+                if ((event.ctrlKey || event.metaKey) && event.key === "Enter")
+                  addTodoThought();
+              }}
+              placeholder={
+                selectedTodo ? "记录这个 Todo 的想法..." : "先点击一个 Todo"
+              }
+              aria-label="Todo 想法"
+              disabled={!selectedTodo}
             />
-            <button onClick={addNote} disabled={!noteInput.trim()}>
-              保存记录
+            <button
+              onClick={addTodoThought}
+              disabled={!selectedTodo || !thoughtInput.trim()}
+            >
+              保存想法
             </button>
           </div>
-          {notes.slice(0, 2).map((note) => (
-            <button
-              className="note-preview"
-              key={note.id}
-              onClick={() =>
-                setExpandedNote(expandedNote === note.id ? null : note.id)
-              }
-            >
-              <span>{note.createdAt}</span>
-              <b>{note.text}</b>
-            </button>
-          ))}
+          <div className="todo-thought-list">
+            {(selectedTodo?.thoughts ?? []).map((thought) => (
+              <div className="todo-thought" key={thought.id}>
+                <p>{thought.text}</p>
+                <time>{noteTime(thought.createdAt)}</time>
+              </div>
+            ))}
+            {selectedTodo && (selectedTodo.thoughts ?? []).length === 0 && (
+              <p className="empty-thoughts">还没有想法，写下第一条吧。</p>
+            )}
+          </div>
         </>
       ) : (
         <div className="memo-panel">

@@ -517,6 +517,16 @@ textarea:focus-visible {
 .task-row:hover {
   background: rgba(255, 255, 255, 0.35);
 }
+.todo-row {
+  cursor: pointer;
+}
+.todo-row.is-selected {
+  background: rgba(225, 240, 232, 0.52);
+}
+.todo-row:focus-visible {
+  outline: 2px solid rgba(136, 189, 169, 0.65);
+  outline-offset: -2px;
+}
 .task-row.just-toggled .check-button {
   animation: pop 0.55s ease;
 }
@@ -549,6 +559,14 @@ textarea:focus-visible {
 .task-row.is-done .task-text {
   color: #aaa69c;
   text-decoration: line-through;
+}
+.task-text small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+  margin-top: 2px;
+  text-decoration: none;
 }
 .tomato-count {
   color: var(--muted);
@@ -623,6 +641,37 @@ textarea::placeholder {
   font-size: 12px;
   line-height: 1.7;
   color: var(--ink);
+}
+.todo-thought-editor textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.todo-thought-list {
+  margin-top: 14px;
+}
+.todo-thought {
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.todo-thought p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.todo-thought time {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.empty-thoughts {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 0;
+  padding: 4px 0 12px;
 }
 .note-toolbar {
   justify-content: space-between;
