@@ -1,27 +1,122 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
-import { ArrowLeft, BarChart3, CalendarDays, Check, CheckCircle2, ChevronDown, Clock3, Coffee, FileText, Leaf, Menu, Pause, Play, Plus, RotateCcw, SkipForward, Sparkles, Target, Timer, Trash2, TrendingUp, Volume2, VolumeX, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
+import {
+  ArrowLeft,
+  BarChart3,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Clock3,
+  Coffee,
+  FileText,
+  Leaf,
+  Menu,
+  Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  SkipForward,
+  Sparkles,
+  Target,
+  Timer,
+  Trash2,
+  TrendingUp,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
 
-type Mode = 'focus' | 'short' | 'long';
-type TaskType = 'pomodoro' | 'countup';
-type View = 'timer' | 'stats';
-type RightPanelView = 'todo' | 'notes';
-type FocusStatus = 'completed' | 'abandoned';
-type FocusTask = { id: number; text: string; rounds: number; focusSeconds: number; done: boolean; type: TaskType };
+type Mode = "focus" | "short" | "long";
+type TaskType = "pomodoro" | "countup";
+type View = "timer" | "stats";
+type RightPanelView = "todo" | "notes";
+type FocusStatus = "completed" | "abandoned" | "skipped";
+type FocusTask = {
+  id: number;
+  text: string;
+  rounds: number;
+  focusSeconds: number;
+  done: boolean;
+  type: TaskType;
+};
 type Todo = { id: number; text: string; done: boolean };
 type Note = { id: number; text: string; createdAt: string };
-type MemoNote = { id: number; title: string; body: string; createdAt: string; updatedAt: string };
-type FocusSession = { id: number; taskName: string; seconds: number; rounds: number; date?: string; status?: FocusStatus; startedAt?: string };
-type Filter = 'day' | 'week' | 'month' | 'custom';
+type MemoNote = {
+  id: number;
+  title: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+};
+type FocusSession = {
+  id: number;
+  taskName: string;
+  seconds: number;
+  rounds: number;
+  date?: string;
+  status?: FocusStatus;
+  startedAt?: string;
+};
+type Filter = "day" | "week" | "month" | "custom";
+type TimerSnapshot = {
+  taskId: number | null;
+  mode: Mode;
+  isRunning: boolean;
+  startedAt: number | null;
+  startValue: number;
+  remaining: number;
+  elapsed: number;
+  completedPending: boolean;
+};
+type AppSettings = { soundOn: boolean; notificationsOn: boolean };
 
-const MODES: Record<Mode, { label: string; minutes: number; icon: typeof Clock3 }> = { focus: { label: '专注', minutes: 25, icon: Clock3 }, short: { label: '短休息', minutes: 5, icon: Coffee }, long: { label: '长休息', minutes: 15, icon: Leaf } };
-const initialNotes: Note[] = [{ id: 1, text: '今天的节奏很好，下午留一点时间做收尾。', createdAt: '今天 09:42' }];
-const initialMemoNotes: MemoNote[] = [{ id: 1, title: '今天的节奏', body: '今天的节奏很好，下午留一点时间做收尾。', createdAt: '今天 09:42', updatedAt: '今天 09:42' }];
-const initialTodos: Todo[] = [{ id: 1, text: '整理今天的优先事项', done: false }, { id: 2, text: '给自己留一段安静时间', done: false }];
-const STORAGE_KEYS = { todos: 'momofocus.todos', notes: 'momofocus.notes', tasks: 'momofocus.tasks', sessions: 'momofocus.sessions' } as const;
-const readStorage = <T,>(key: string, fallback: T, isValid: (value: unknown) => value is T) => {
+const MODES: Record<
+  Mode,
+  { label: string; minutes: number; icon: typeof Clock3 }
+> = {
+  focus: { label: "专注", minutes: 25, icon: Clock3 },
+  short: { label: "短休息", minutes: 5, icon: Coffee },
+  long: { label: "长休息", minutes: 15, icon: Leaf },
+};
+const initialNotes: Note[] = [
+  {
+    id: 1,
+    text: "今天的节奏很好，下午留一点时间做收尾。",
+    createdAt: "今天 09:42",
+  },
+];
+const initialMemoNotes: MemoNote[] = [
+  {
+    id: 1,
+    title: "今天的节奏",
+    body: "今天的节奏很好，下午留一点时间做收尾。",
+    createdAt: "今天 09:42",
+    updatedAt: "今天 09:42",
+  },
+];
+const initialTodos: Todo[] = [
+  { id: 1, text: "整理今天的优先事项", done: false },
+  { id: 2, text: "给自己留一段安静时间", done: false },
+];
+const STORAGE_KEYS = {
+  todos: "momofocus.todos",
+  notes: "momofocus.notes",
+  quickNotes: "momofocus.quickNotes",
+  tasks: "momofocus.tasks",
+  sessions: "momofocus.sessions",
+  timer: "momofocus.timer",
+  settings: "momofocus.settings",
+} as const;
+const readStorage = <T,>(
+  key: string,
+  fallback: T,
+  isValid: (value: unknown) => value is T,
+) => {
   try {
-    const value: unknown = JSON.parse(window.localStorage.getItem(key) ?? 'null');
+    const value: unknown = JSON.parse(
+      window.localStorage.getItem(key) ?? "null",
+    );
     return isValid(value) ? value : fallback;
   } catch {
     return fallback;
@@ -34,122 +129,1695 @@ const writeStorage = (key: string, value: unknown) => {
     // Storage can be unavailable or full; the in-memory state still remains usable.
   }
 };
+const nextId = () => Date.now() * 1000 + Math.floor(Math.random() * 1000);
 const isArray = <T,>(value: unknown): value is T[] => Array.isArray(value);
-const isTodoArray = (value: unknown): value is Todo[] => Array.isArray(value) && value.every((item) => item && typeof item === 'object' && typeof (item as Todo).id === 'number' && typeof (item as Todo).text === 'string' && typeof (item as Todo).done === 'boolean');
-const isMemoArray = (value: unknown): value is MemoNote[] => Array.isArray(value) && value.every((item) => item && typeof item === 'object' && typeof (item as MemoNote).id === 'number' && typeof (item as MemoNote).title === 'string' && typeof (item as MemoNote).body === 'string' && typeof (item as MemoNote).createdAt === 'string' && typeof (item as MemoNote).updatedAt === 'string');
-const formatTime = (seconds: number) => `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, '0')}:${String(Math.max(0, seconds) % 60).padStart(2, '0')}`;
-const formatDuration = (seconds: number) => { const minutes = Math.floor(seconds / 60); return minutes < 60 ? `${minutes} 分钟` : `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分钟`; };
-const dateKey = (date = new Date()) => { const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10); };
-const startOfWeek = (date: Date) => { const copy = new Date(date); const day = copy.getDay() || 7; copy.setDate(copy.getDate() - day + 1); copy.setHours(0, 0, 0, 0); return copy; };
+const isTodoArray = (value: unknown): value is Todo[] =>
+  Array.isArray(value) &&
+  value.every(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      typeof (item as Todo).id === "number" &&
+      typeof (item as Todo).text === "string" &&
+      typeof (item as Todo).done === "boolean",
+  );
+const isMemoArray = (value: unknown): value is MemoNote[] =>
+  Array.isArray(value) &&
+  value.every(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      typeof (item as MemoNote).id === "number" &&
+      typeof (item as MemoNote).title === "string" &&
+      typeof (item as MemoNote).body === "string" &&
+      typeof (item as MemoNote).createdAt === "string" &&
+      typeof (item as MemoNote).updatedAt === "string",
+  );
+const isNoteArray = (value: unknown): value is Note[] =>
+  Array.isArray(value) &&
+  value.every(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      typeof (item as Note).id === "number" &&
+      typeof (item as Note).text === "string" &&
+      typeof (item as Note).createdAt === "string",
+  );
+const isTimerSnapshot = (value: unknown): value is TimerSnapshot =>
+  Boolean(
+    value &&
+    typeof value === "object" &&
+    ["focus", "short", "long"].includes((value as TimerSnapshot).mode) &&
+    typeof (value as TimerSnapshot).remaining === "number" &&
+    typeof (value as TimerSnapshot).elapsed === "number",
+  );
+const isSettings = (value: unknown): value is AppSettings =>
+  Boolean(
+    value &&
+    typeof value === "object" &&
+    typeof (value as AppSettings).soundOn === "boolean" &&
+    typeof (value as AppSettings).notificationsOn === "boolean",
+  );
+const formatTime = (seconds: number) =>
+  `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, "0")}:${String(Math.max(0, seconds) % 60).padStart(2, "0")}`;
+const formatDuration = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  return minutes < 60
+    ? `${minutes} 分钟`
+    : `${Math.floor(minutes / 60)} 小时 ${minutes % 60} 分钟`;
+};
+const dateKey = (date = new Date()) => {
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10);
+};
+const dateLabel = (date = new Date()) =>
+  `${date.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase()} · ${date.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" })}`;
+const startOfWeek = (date: Date) => {
+  const copy = new Date(date);
+  const day = copy.getDay() || 7;
+  copy.setDate(copy.getDate() - day + 1);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+};
 
 function TomatoIcon() {
-  return <svg className="tomato-icon" viewBox="0 0 48 48" role="img" aria-label="番茄小窝图标">
-    <path d="M24 13c-10.8 0-18 7.3-18 16.2C6 38.4 13.8 44 24 44s18-5.6 18-14.8C42 20.3 34.8 13 24 13Z" fill="currentColor" />
-    <path d="M24 14.5c-1.9-5.2.8-9.7 5.8-11.5.9 4.2-.6 8.6-5.8 11.5Z" fill="#548a72" />
-    <path d="M23.8 14.5c-4.1-4-9-3.7-12.5-.8 3.6 3.4 8.2 4.2 12.5.8Z" fill="#6ca384" />
-    <path d="M14.5 20.5c2.3-2.2 5.1-3.1 7.2-2.1-1.4 2.6-3.8 4.1-7.2 2.1Z" fill="rgba(255,255,255,.34)" />
-  </svg>;
+  return (
+    <svg
+      className="tomato-icon"
+      viewBox="0 0 48 48"
+      role="img"
+      aria-label="番茄小窝图标"
+    >
+      <path
+        d="M24 13c-10.8 0-18 7.3-18 16.2C6 38.4 13.8 44 24 44s18-5.6 18-14.8C42 20.3 34.8 13 24 13Z"
+        fill="currentColor"
+      />
+      <path
+        d="M24 14.5c-1.9-5.2.8-9.7 5.8-11.5.9 4.2-.6 8.6-5.8 11.5Z"
+        fill="#548a72"
+      />
+      <path
+        d="M23.8 14.5c-4.1-4-9-3.7-12.5-.8 3.6 3.4 8.2 4.2 12.5.8Z"
+        fill="#6ca384"
+      />
+      <path
+        d="M14.5 20.5c2.3-2.2 5.1-3.1 7.2-2.1-1.4 2.6-3.8 4.1-7.2 2.1Z"
+        fill="rgba(255,255,255,.34)"
+      />
+    </svg>
+  );
 }
 
 function App() {
-  const [view, setView] = useState<View>('timer');
-  const [tasks, setTasks] = useState<FocusTask[]>(() => readStorage(STORAGE_KEYS.tasks, [], isArray<FocusTask>)); const [todos, setTodos] = useState<Todo[]>(() => readStorage(STORAGE_KEYS.todos, initialTodos, isTodoArray)); const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null); const [taskInput, setTaskInput] = useState(''); const [taskTypeInput, setTaskTypeInput] = useState<TaskType>('pomodoro'); const [todoInput, setTodoInput] = useState(''); const [isCreatingTask, setIsCreatingTask] = useState(false);
-  const [mode, setMode] = useState<Mode>('focus'); const [remaining, setRemaining] = useState(MODES.focus.minutes * 60); const [elapsed, setElapsed] = useState(0); const [isRunning, setIsRunning] = useState(false); const [sessions, setSessions] = useState<FocusSession[]>(() => readStorage(STORAGE_KEYS.sessions, [], isArray<FocusSession>)); const [notes, setNotes] = useState(initialNotes); const [noteInput, setNoteInput] = useState(''); const [expandedNote, setExpandedNote] = useState<number | null>(null); const [memoNotes, setMemoNotes] = useState<MemoNote[]>(() => readStorage(STORAGE_KEYS.notes, initialMemoNotes, isMemoArray)); const [rightPanelView, setRightPanelView] = useState<RightPanelView>('todo'); const [soundOn, setSoundOn] = useState(true); const [showSoundTip, setShowSoundTip] = useState(false);
-  const [filter, setFilter] = useState<Filter>('day'); const [customStart, setCustomStart] = useState(dateKey()); const [customEnd, setCustomEnd] = useState(dateKey());
-  const timerRef = useRef<number | null>(null); const startedAtRef = useRef<number | null>(null); const startValueRef = useRef(0); const autoStartTaskIdRef = useRef<number | null>(null); const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null; const isCountup = selectedTask?.type === 'countup'; const totalSeconds = MODES[mode].minutes * 60; const displayedSeconds = isCountup ? elapsed : remaining; const progress = isCountup ? (elapsed % totalSeconds) / totalSeconds : 1 - remaining / totalSeconds; const radius = 136; const circumference = 2 * Math.PI * radius;
-  const totalRounds = useMemo(() => tasks.reduce((total, task) => total + task.rounds, 0), [tasks]); const doneCount = useMemo(() => todos.filter((todo) => todo.done).length, [todos]);
+  const [view, setView] = useState<View>("timer");
+  const [tasks, setTasks] = useState<FocusTask[]>(() =>
+    readStorage(STORAGE_KEYS.tasks, [], isArray<FocusTask>),
+  );
+  const [todos, setTodos] = useState<Todo[]>(() =>
+    readStorage(STORAGE_KEYS.todos, initialTodos, isTodoArray),
+  );
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [taskInput, setTaskInput] = useState("");
+  const [taskTypeInput, setTaskTypeInput] = useState<TaskType>("pomodoro");
+  const [todoInput, setTodoInput] = useState("");
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [mode, setMode] = useState<Mode>("focus");
+  const [remaining, setRemaining] = useState(MODES.focus.minutes * 60);
+  const [elapsed, setElapsed] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [sessions, setSessions] = useState<FocusSession[]>(() =>
+    readStorage(STORAGE_KEYS.sessions, [], isArray<FocusSession>),
+  );
+  const [notes, setNotes] = useState<Note[]>(() =>
+    readStorage(STORAGE_KEYS.quickNotes, initialNotes, isNoteArray),
+  );
+  const [noteInput, setNoteInput] = useState("");
+  const [expandedNote, setExpandedNote] = useState<number | null>(null);
+  const [memoNotes, setMemoNotes] = useState<MemoNote[]>(() =>
+    readStorage(STORAGE_KEYS.notes, initialMemoNotes, isMemoArray),
+  );
+  const [rightPanelView, setRightPanelView] = useState<RightPanelView>("todo");
+  const [soundOn, setSoundOn] = useState(
+    () =>
+      readStorage(
+        STORAGE_KEYS.settings,
+        { soundOn: true, notificationsOn: true },
+        isSettings,
+      ).soundOn,
+  );
+  const [notificationsOn, setNotificationsOn] = useState(
+    () =>
+      readStorage(
+        STORAGE_KEYS.settings,
+        { soundOn: true, notificationsOn: true },
+        isSettings,
+      ).notificationsOn,
+  );
+  const [showSoundTip, setShowSoundTip] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState("");
+  const [filter, setFilter] = useState<Filter>("day");
+  const [customStart, setCustomStart] = useState(dateKey());
+  const [customEnd, setCustomEnd] = useState(dateKey());
+  const timerRef = useRef<number | null>(null);
+  const startedAtRef = useRef<number | null>(null);
+  const startValueRef = useRef(0);
+  const autoStartTaskIdRef = useRef<number | null>(null);
+  const restoringRef = useRef(true);
+  const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const isCountup = selectedTask?.type === "countup";
+  const totalSeconds = MODES[mode].minutes * 60;
+  const displayedSeconds = isCountup ? elapsed : remaining;
+  const progress = isCountup
+    ? Math.min(1, elapsed / totalSeconds)
+    : Math.min(1, 1 - remaining / totalSeconds);
+  const radius = 136;
+  const circumference = 2 * Math.PI * radius;
+  const totalRounds = useMemo(
+    () => tasks.reduce((total, task) => total + task.rounds, 0),
+    [tasks],
+  );
+  const doneCount = useMemo(
+    () => todos.filter((todo) => todo.done).length,
+    [todos],
+  );
 
-  useEffect(() => { writeStorage(STORAGE_KEYS.tasks, tasks); }, [tasks]);
-  useEffect(() => { writeStorage(STORAGE_KEYS.todos, todos); }, [todos]);
-  useEffect(() => { writeStorage(STORAGE_KEYS.sessions, sessions); }, [sessions]);
-  useEffect(() => { writeStorage(STORAGE_KEYS.notes, memoNotes); }, [memoNotes]);
-
-  const stopTimer = useCallback(() => { if (timerRef.current) window.clearInterval(timerRef.current); timerRef.current = null; }, []);
-  const recordFocus = useCallback((completedRound = false, countdownRemaining?: number) => { if (!selectedTask || !startedAtRef.current) return; const startedAt = startedAtRef.current; const liveRemaining = countdownRemaining ?? Math.max(0, startValueRef.current - Math.ceil((Date.now() - startedAt) / 1000)); const seconds = isCountup ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : Math.max(0, startValueRef.current - liveRemaining); if (seconds <= 0) return; if (mode === 'focus' || isCountup) { setTasks((items) => items.map((task) => task.id === selectedTask.id ? { ...task, focusSeconds: task.focusSeconds + seconds, rounds: task.rounds + (completedRound && task.type === 'pomodoro' && mode === 'focus' ? 1 : 0) } : task)); setSessions((items) => [{ id: Date.now(), taskName: selectedTask.text, seconds, rounds: completedRound ? 1 : 0, date: dateKey(new Date(startedAt)), status: completedRound ? 'completed' : 'abandoned', startedAt: new Date(startedAt).toISOString() }, ...items]); } startedAtRef.current = null; }, [isCountup, mode, selectedTask]);
-  const updateTimer = useCallback(() => { if (!startedAtRef.current) return; if (isCountup) { setElapsed(startValueRef.current + Math.floor((Date.now() - startedAtRef.current) / 1000)); return; } const next = Math.max(0, Math.ceil((startedAtRef.current + startValueRef.current * 1000 - Date.now()) / 1000)); setRemaining(next); if (next === 0) { recordFocus(true, 0); setIsRunning(false); stopTimer(); } }, [isCountup, recordFocus, stopTimer]);
   useEffect(() => {
-    if (!selectedTask || autoStartTaskIdRef.current !== selectedTask.id) return;
-    autoStartTaskIdRef.current = null;
-    startedAtRef.current = Date.now();
-    startValueRef.current = isCountup ? 0 : remaining;
-    setIsRunning(true);
-    timerRef.current = window.setInterval(updateTimer, 250);
-  }, [isCountup, remaining, selectedTask, updateTimer]);
-  useEffect(() => () => stopTimer(), [stopTimer]);
-  const toggleTimer = () => { if (isRunning) { updateTimer(); recordFocus(); setIsRunning(false); stopTimer(); return; } startedAtRef.current = Date.now(); startValueRef.current = isCountup ? elapsed : remaining; setIsRunning(true); timerRef.current = window.setInterval(updateTimer, 250); };
-  const resetTimer = () => { if (isRunning) recordFocus(); stopTimer(); setIsRunning(false); setRemaining(totalSeconds); setElapsed(0); startedAtRef.current = null; };
-  const changeMode = (next: Mode) => { if (isRunning) recordFocus(); stopTimer(); setIsRunning(false); setMode(next); setRemaining(MODES[next].minutes * 60); setElapsed(0); startedAtRef.current = null; };
-  const selectTask = (task: FocusTask) => { if (isRunning) recordFocus(); stopTimer(); setIsRunning(false); autoStartTaskIdRef.current = task.id; setSelectedTaskId(task.id); setRemaining(MODES[mode].minutes * 60); setElapsed(0); startedAtRef.current = null; };
-  const exitTask = () => { if (isRunning) recordFocus(); stopTimer(); setIsRunning(false); autoStartTaskIdRef.current = null; setSelectedTaskId(null); setRemaining(MODES[mode].minutes * 60); setElapsed(0); startedAtRef.current = null; };
-  const addTask = () => { const text = taskInput.trim(); if (!text) return; setTasks((items) => [...items, { id: Date.now(), text, rounds: 0, focusSeconds: 0, done: false, type: taskTypeInput }]); setTaskInput(''); setIsCreatingTask(false); };
-  const addTodo = () => { const text = todoInput.trim(); if (!text) return; setTodos((items) => [...items, { id: Date.now(), text, done: false }]); setTodoInput(''); }; const addNote = () => { const text = noteInput.trim(); if (!text) return; setNotes((items) => [{ id: Date.now(), text, createdAt: '刚刚' }, ...items]); setNoteInput(''); };
-  const renderTaskEntry = () => <div className="central-task-state">{tasks.length === 0 ? <><span className="empty-kicker">专注工作区</span><h2>先从一件事开始，<br /><em>把注意力放回来。</em></h2><p>创建一个专注任务，再选择适合你的计时方式。</p></> : <><span className="empty-kicker">专注任务</span><h2>准备好开始<br /><em>下一件事了吗？</em></h2><div className="central-task-list">{tasks.map((task, index) => <button className={`central-task-row task-color-${index % 4}`} key={task.id} onClick={() => selectTask(task)}><span className="central-task-mark" /><span><b>{task.text}</b><small>{task.type === 'countup' ? '正计时' : '番茄钟'} · {formatDuration(task.focusSeconds)}</small></span><ChevronDown size={15} /></button>)}</div></>}<div className={`new-task-form ${isCreatingTask ? 'is-open' : ''}`}>{isCreatingTask ? <><div className="new-task-fields"><input autoFocus value={taskInput} onChange={(event) => setTaskInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') addTask(); }} placeholder="任务名称" aria-label="任务名称" /><select value={taskTypeInput} onChange={(event) => setTaskTypeInput(event.target.value as TaskType)}><option value="pomodoro">番茄钟 · 25 分钟</option><option value="countup">正计时 · 自由记录</option></select></div><div className="new-task-actions"><button className="primary-button" onClick={addTask} disabled={!taskInput.trim()}><Plus size={16} />创建专注任务</button><button className="text-button" onClick={() => setIsCreatingTask(false)}>取消</button></div></> : <button className="new-task-button" onClick={() => setIsCreatingTask(true)}><Plus size={18} />新建专注任务</button>}</div>{sessions.length > 0 && <FocusHistory sessions={sessions} />}</div>;
+    writeStorage(STORAGE_KEYS.tasks, tasks);
+  }, [tasks]);
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.todos, todos);
+  }, [todos]);
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.sessions, sessions);
+  }, [sessions]);
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.notes, memoNotes);
+  }, [memoNotes]);
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.quickNotes, notes);
+  }, [notes]);
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.settings, { soundOn, notificationsOn });
+  }, [soundOn, notificationsOn]);
+  useEffect(() => {
+    if (restoringRef.current) return;
+    writeStorage(STORAGE_KEYS.timer, {
+      taskId: selectedTaskId,
+      mode,
+      isRunning,
+      startedAt: startedAtRef.current,
+      startValue: startValueRef.current,
+      remaining,
+      elapsed,
+      completedPending: !isCountup && remaining === 0,
+    });
+  }, [selectedTaskId, mode, isRunning, remaining, elapsed, isCountup]);
 
-  return <main className="app-shell"><header className="topbar"><div className="brand-lockup"><div className="brand-mark"><TomatoIcon /></div><div><strong>MomoFocus</strong><span>番茄小窝</span></div></div><div className="top-actions">{view === 'timer' ? <div className="today-state"><span className="status-dot" />今日专注 <b>{sessions.filter((s) => s.date === dateKey() && s.status === 'completed').length} 次</b></div> : <button className="back-button" onClick={() => setView('timer')}><ArrowLeft size={15} />返回计时</button>}<button className={`icon-button ${soundOn ? '' : 'is-muted'}`} aria-label="切换声音" onClick={() => { setSoundOn((value) => !value); setShowSoundTip(true); }}>{soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>{showSoundTip && <div className="mini-popover sound-popover"><span>{soundOn ? '提示音已开启' : '提示音已关闭'}</span><button onClick={() => setShowSoundTip(false)}><X size={14} /></button></div>}<button className="mobile-menu" aria-label="打开菜单"><Menu size={20} /></button></div></header>{view === 'timer' ? <TimerView {...{ tasks, todos, selectedTask, selectedTaskId, setSelectedTaskId, setTasks, setTodos, todoInput, setTodoInput, addTodo, notes, setNotes, noteInput, setNoteInput, addNote, expandedNote, setExpandedNote, memoNotes, setMemoNotes, rightPanelView, setRightPanelView, totalRounds, doneCount, renderTaskEntry, isCountup, mode, changeMode, displayedSeconds, radius, circumference, progress, isRunning, remaining, toggleTimer, resetTimer, exitTask, sessions, setView }} /> : <StatsView sessions={sessions} filter={filter} setFilter={setFilter} customStart={customStart} setCustomStart={setCustomStart} customEnd={customEnd} setCustomEnd={setCustomEnd} />}</main>;
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    timerRef.current = null;
+  }, []);
+  const notifyUser = useCallback(
+    (title: string, body: string) => {
+      if (notificationsOn) void window.momoFocusNative?.notify({ title, body });
+    },
+    [notificationsOn],
+  );
+  const playCompletionSound = useCallback(() => {
+    if (!soundOn) return;
+    try {
+      const context = new AudioContext();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.frequency.value = 740;
+      oscillator.type = "sine";
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.16, context.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        context.currentTime + 0.55,
+      );
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.6);
+    } catch {
+      /* Audio is optional and must not interrupt timing. */
+    }
+  }, [soundOn]);
+  const recordFocus = useCallback(
+    (
+      completedRound = false,
+      status: FocusStatus = "abandoned",
+      countdownRemaining?: number,
+    ) => {
+      if (!selectedTask || !startedAtRef.current) return;
+      const startedAt = startedAtRef.current;
+      const liveRemaining =
+        countdownRemaining ??
+        Math.max(
+          0,
+          startValueRef.current - Math.ceil((Date.now() - startedAt) / 1000),
+        );
+      const seconds = isCountup
+        ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
+        : Math.max(0, startValueRef.current - liveRemaining);
+      if (seconds <= 0) {
+        startedAtRef.current = null;
+        return;
+      }
+      if (mode === "focus" || isCountup) {
+        setTasks((items) =>
+          items.map((task) =>
+            task.id === selectedTask.id
+              ? {
+                  ...task,
+                  focusSeconds: task.focusSeconds + seconds,
+                  rounds:
+                    task.rounds +
+                    (completedRound &&
+                    task.type === "pomodoro" &&
+                    mode === "focus"
+                      ? 1
+                      : 0),
+                }
+              : task,
+          ),
+        );
+        setSessions((items) => [
+          {
+            id: nextId(),
+            taskName: selectedTask.text,
+            seconds,
+            rounds: completedRound ? 1 : 0,
+            date: dateKey(new Date(startedAt)),
+            status,
+            startedAt: new Date(startedAt).toISOString(),
+          },
+          ...items,
+        ]);
+      }
+      startedAtRef.current = null;
+    },
+    [isCountup, mode, selectedTask],
+  );
+  const finishPhase = useCallback(() => {
+    if (!selectedTask) return;
+    recordFocus(true, "completed", 0);
+    playCompletionSound();
+    const nextMode: Mode = isCountup
+      ? "focus"
+      : mode === "focus"
+        ? selectedTask.rounds % 4 === 3
+          ? "long"
+          : "short"
+        : "focus";
+    const nextLabel =
+      nextMode === "focus"
+        ? "专注完成，可以开始下一轮了"
+        : "专注完成，休息一下吧";
+    setMode(nextMode);
+    setRemaining(MODES[nextMode].minutes * 60);
+    setElapsed(0);
+    setIsRunning(false);
+    setCompletionMessage(nextLabel);
+    notifyUser(
+      nextLabel,
+      nextMode === "focus"
+        ? "休息结束后，准备开始新的专注。"
+        : `已切换到${MODES[nextMode].label}。`,
+    );
+  }, [
+    isCountup,
+    mode,
+    notifyUser,
+    playCompletionSound,
+    recordFocus,
+    selectedTask,
+  ]);
+  const updateTimer = useCallback(() => {
+    if (!startedAtRef.current) return;
+    if (isCountup) {
+      setElapsed(
+        startValueRef.current +
+          Math.floor((Date.now() - startedAtRef.current) / 1000),
+      );
+      return;
+    }
+    const next = Math.max(
+      0,
+      Math.ceil(
+        (startedAtRef.current + startValueRef.current * 1000 - Date.now()) /
+          1000,
+      ),
+    );
+    setRemaining(next);
+    if (next === 0) {
+      stopTimer();
+      setIsRunning(false);
+      finishPhase();
+    }
+  }, [finishPhase, isCountup, stopTimer]);
+  const startTimer = useCallback(() => {
+    if (!selectedTask || startedAtRef.current || (!isCountup && remaining <= 0))
+      return;
+    startedAtRef.current = Date.now();
+    startValueRef.current = isCountup ? elapsed : remaining;
+    setCompletionMessage("");
+    setIsRunning(true);
+    stopTimer();
+    timerRef.current = window.setInterval(updateTimer, 250);
+  }, [elapsed, isCountup, remaining, selectedTask, stopTimer, updateTimer]);
+  useEffect(() => {
+    if (!restoringRef.current) return;
+    const snapshot = readStorage<TimerSnapshot | null>(
+      STORAGE_KEYS.timer,
+      null,
+      (value): value is TimerSnapshot | null =>
+        value === null || isTimerSnapshot(value),
+    );
+    if (
+      snapshot &&
+      snapshot.taskId !== null &&
+      tasks.some((task) => task.id === snapshot.taskId)
+    ) {
+      setSelectedTaskId(snapshot.taskId);
+      setMode(snapshot.mode);
+      setRemaining(snapshot.remaining);
+      setElapsed(snapshot.elapsed);
+      startValueRef.current = snapshot.startValue;
+      startedAtRef.current = snapshot.startedAt;
+      if (snapshot.isRunning && snapshot.startedAt) {
+        setIsRunning(true);
+        if (snapshot.mode !== "focus" || snapshot.remaining > 0)
+          timerRef.current = window.setInterval(updateTimer, 250);
+      }
+      if (snapshot.completedPending) {
+        setRemaining(0);
+        setIsRunning(false);
+        startedAtRef.current = null;
+        setCompletionMessage("本轮已完成，可以开始休息了");
+      }
+    }
+    restoringRef.current = false;
+  }, [tasks, updateTimer]);
+  useEffect(() => {
+    if (
+      !selectedTask ||
+      restoringRef.current ||
+      autoStartTaskIdRef.current !== selectedTask.id
+    )
+      return;
+    autoStartTaskIdRef.current = null;
+    startTimer();
+  }, [selectedTask, startTimer]);
+  useEffect(() => () => stopTimer(), [stopTimer]);
+  const toggleTimer = () => {
+    if (isRunning) {
+      updateTimer();
+      recordFocus(false, "abandoned");
+      setIsRunning(false);
+      stopTimer();
+      return;
+    }
+    startTimer();
+  };
+  const resetTimer = () => {
+    if (isRunning) recordFocus(false, "abandoned");
+    stopTimer();
+    setIsRunning(false);
+    setRemaining(totalSeconds);
+    setElapsed(0);
+    startedAtRef.current = null;
+    setCompletionMessage("当前阶段已重置");
+  };
+  const changeMode = (next: Mode) => {
+    if (isRunning) recordFocus(false, "abandoned");
+    stopTimer();
+    setIsRunning(false);
+    setMode(next);
+    setRemaining(MODES[next].minutes * 60);
+    setElapsed(0);
+    startedAtRef.current = null;
+    setCompletionMessage("");
+  };
+  const skipPhase = () => {
+    if (isRunning) recordFocus(false, "skipped");
+    stopTimer();
+    setIsRunning(false);
+    setMode(mode === "focus" ? "short" : "focus");
+    setRemaining(MODES[mode === "focus" ? "short" : "focus"].minutes * 60);
+    setElapsed(0);
+    startedAtRef.current = null;
+    setCompletionMessage("已跳过当前阶段");
+  };
+  const selectTask = (task: FocusTask) => {
+    if (isRunning) recordFocus(false, "abandoned");
+    stopTimer();
+    setIsRunning(false);
+    autoStartTaskIdRef.current = task.id;
+    setSelectedTaskId(task.id);
+    setRemaining(MODES[mode].minutes * 60);
+    setElapsed(0);
+    startedAtRef.current = null;
+  };
+  const exitTask = () => {
+    if (isRunning) recordFocus(false, "abandoned");
+    stopTimer();
+    setIsRunning(false);
+    autoStartTaskIdRef.current = null;
+    setSelectedTaskId(null);
+    setRemaining(MODES[mode].minutes * 60);
+    setElapsed(0);
+    startedAtRef.current = null;
+  };
+  const addTask = () => {
+    const text = taskInput.trim();
+    if (!text) return;
+    setTasks((items) => [
+      ...items,
+      {
+        id: nextId(),
+        text,
+        rounds: 0,
+        focusSeconds: 0,
+        done: false,
+        type: taskTypeInput,
+      },
+    ]);
+    setTaskInput("");
+    setIsCreatingTask(false);
+  };
+  const addTodo = () => {
+    const text = todoInput.trim();
+    if (!text) return;
+    setTodos((items) => [...items, { id: nextId(), text, done: false }]);
+    setTodoInput("");
+  };
+  const addNote = () => {
+    const text = noteInput.trim();
+    if (!text) return;
+    setNotes((items) => [{ id: nextId(), text, createdAt: "刚刚" }, ...items]);
+    setNoteInput("");
+  };
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      if (event.key === " ") {
+        event.preventDefault();
+        if (selectedTask) toggleTimer();
+      } else if (event.key.toLowerCase() === "r" && selectedTask) resetTimer();
+      else if (event.key.toLowerCase() === "s" && selectedTask && !isCountup)
+        skipPhase();
+      else if (event.key === "Escape") {
+        if (mobileMenuOpen) setMobileMenuOpen(false);
+        else if (showSoundTip) setShowSoundTip(false);
+        else if (selectedTask) exitTask();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
+  const renderTaskEntry = () => (
+    <div className="central-task-state">
+      {tasks.length === 0 ? (
+        <>
+          <span className="empty-kicker">专注工作区</span>
+          <h2>
+            先从一件事开始，
+            <br />
+            <em>把注意力放回来。</em>
+          </h2>
+          <p>创建一个专注任务，再选择适合你的计时方式。</p>
+        </>
+      ) : (
+        <>
+          <span className="empty-kicker">专注任务</span>
+          <h2>
+            准备好开始
+            <br />
+            <em>下一件事了吗？</em>
+          </h2>
+          <div className="central-task-list">
+            {tasks.map((task, index) => (
+              <button
+                className={`central-task-row task-color-${index % 4}`}
+                key={task.id}
+                onClick={() => selectTask(task)}
+              >
+                <span className="central-task-mark" />
+                <span>
+                  <b>{task.text}</b>
+                  <small>
+                    {task.type === "countup" ? "正计时" : "番茄钟"} ·{" "}
+                    {formatDuration(task.focusSeconds)}
+                  </small>
+                </span>
+                <ChevronDown size={15} />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      <div className={`new-task-form ${isCreatingTask ? "is-open" : ""}`}>
+        {isCreatingTask ? (
+          <>
+            <div className="new-task-fields">
+              <input
+                autoFocus
+                value={taskInput}
+                onChange={(event) => setTaskInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") addTask();
+                }}
+                placeholder="任务名称"
+                aria-label="任务名称"
+              />
+              <select
+                value={taskTypeInput}
+                onChange={(event) =>
+                  setTaskTypeInput(event.target.value as TaskType)
+                }
+              >
+                <option value="pomodoro">番茄钟 · 25 分钟</option>
+                <option value="countup">正计时 · 自由记录</option>
+              </select>
+            </div>
+            <div className="new-task-actions">
+              <button
+                className="primary-button"
+                onClick={addTask}
+                disabled={!taskInput.trim()}
+              >
+                <Plus size={16} />
+                创建专注任务
+              </button>
+              <button
+                className="text-button"
+                onClick={() => setIsCreatingTask(false)}
+              >
+                取消
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            className="new-task-button"
+            onClick={() => setIsCreatingTask(true)}
+          >
+            <Plus size={18} />
+            新建专注任务
+          </button>
+        )}
+      </div>
+      {sessions.length > 0 && <FocusHistory sessions={sessions} />}
+    </div>
+  );
+
+  return (
+    <main className="app-shell">
+      <header className="topbar">
+        <div className="brand-lockup">
+          <div className="brand-mark">
+            <TomatoIcon />
+          </div>
+          <div>
+            <strong>MomoFocus</strong>
+            <span>番茄小窝</span>
+          </div>
+        </div>
+        <div className="top-actions">
+          {view === "timer" ? (
+            <div className="today-state">
+              <span className="status-dot" />
+              今日专注{" "}
+              <b>
+                {
+                  sessions.filter(
+                    (s) => s.date === dateKey() && s.status === "completed",
+                  ).length
+                }{" "}
+                次
+              </b>
+            </div>
+          ) : (
+            <button className="back-button" onClick={() => setView("timer")}>
+              <ArrowLeft size={15} />
+              返回计时
+            </button>
+          )}
+          <button
+            className={`icon-button ${soundOn ? "" : "is-muted"}`}
+            aria-label="切换声音"
+            onClick={() => {
+              setSoundOn((value) => !value);
+              setShowSoundTip(true);
+            }}
+          >
+            {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          </button>
+          {showSoundTip && (
+            <div className="mini-popover sound-popover">
+              <span>{soundOn ? "提示音已开启" : "提示音已关闭"}</span>
+              <button
+                aria-label="关闭声音提示"
+                onClick={() => setShowSoundTip(false)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+          <button
+            className="mobile-menu"
+            aria-label="打开菜单"
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((value) => !value)}
+          >
+            <Menu size={20} />
+          </button>
+          {mobileMenuOpen && (
+            <div className="mini-popover mobile-menu-popover">
+              <button
+                onClick={() => {
+                  setView("timer");
+                  setMobileMenuOpen(false);
+                }}
+              >
+                返回计时
+              </button>
+              <button
+                onClick={() => {
+                  setView("stats");
+                  setMobileMenuOpen(false);
+                }}
+              >
+                查看统计
+              </button>
+              <button onClick={() => setNotificationsOn((value) => !value)}>
+                系统通知：{notificationsOn ? "开" : "关"}
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+      {view === "timer" ? (
+        <TimerView
+          {...{
+            tasks,
+            todos,
+            selectedTask,
+            setTodos,
+            todoInput,
+            setTodoInput,
+            addTodo,
+            notes,
+            noteInput,
+            setNoteInput,
+            addNote,
+            expandedNote,
+            setExpandedNote,
+            memoNotes,
+            setMemoNotes,
+            rightPanelView,
+            setRightPanelView,
+            totalRounds,
+            doneCount,
+            renderTaskEntry,
+            isCountup,
+            mode,
+            changeMode,
+            displayedSeconds,
+            radius,
+            circumference,
+            progress,
+            isRunning,
+            remaining,
+            completionMessage,
+            toggleTimer,
+            resetTimer,
+            skipPhase,
+            exitTask,
+            sessions,
+            setView,
+          }}
+        />
+      ) : (
+        <StatsView
+          sessions={sessions}
+          filter={filter}
+          setFilter={setFilter}
+          customStart={customStart}
+          setCustomStart={setCustomStart}
+          customEnd={customEnd}
+          setCustomEnd={setCustomEnd}
+        />
+      )}
+    </main>
+  );
 }
 
-function TimerView(props: any) { const { todos, selectedTask, setTodos, todoInput, setTodoInput, addTodo, notes, noteInput, setNoteInput, addNote, expandedNote, setExpandedNote, memoNotes, setMemoNotes, rightPanelView, setRightPanelView, totalRounds, doneCount, renderTaskEntry, isCountup, mode, changeMode, displayedSeconds, radius, circumference, progress, isRunning, remaining, toggleTimer, resetTimer, exitTask, sessions, setView } = props; const activeMode = mode as Mode; return <><section className="workspace"><aside className="side-rail"><div className="welcome-copy"><span className="eyebrow">SUNDAY · 09月20日</span><h1>慢一点，<br /><em>也很好。</em></h1><p>给今天的自己，留一小段专心的时间。</p></div><div className="daily-summary"><div className="summary-head"><span>待办进度</span><strong>{doneCount}/{todos.length} 事项</strong></div><div className="summary-line"><span style={{ width: `${todos.length ? doneCount / todos.length * 100 : 0}%` }} /></div><div className="summary-foot"><span><CheckCircle2 size={14} /> 已完成 {doneCount} 件</span><span>{totalRounds} 个番茄</span></div></div><button className="stats-nav" onClick={() => setView('stats')}><BarChart3 size={16} />查看专注统计<TrendingUp size={14} /></button><div className="rail-note"><Sparkles size={16} /><span>专注不是把事情做完，<br />是把注意力带回来。</span></div></aside><div className="main-grid"><section className={`focus-panel ${selectedTask ? 'has-selection' : 'no-selection'}`}>{selectedTask ? <><div className="section-kicker"><span>{isCountup ? <Timer size={15} /> : <Clock3 size={15} />}{isCountup ? '正计时时钟' : '专注时钟'}<b className="active-task-label">· {selectedTask.text}</b></span><span className="live-label"><i />{isRunning ? '正在进行' : !isCountup && remaining === 0 ? '本轮完成' : '准备开始'}</span><button className="exit-task-button" onClick={exitTask}><ArrowLeft size={14} />退出任务</button></div>{!isCountup && <div className="mode-tabs">{(Object.keys(MODES) as Mode[]).map((key) => <button key={key} className={activeMode === key ? 'active' : ''} onClick={() => changeMode(key)}>{MODES[key].label}<span>{MODES[key].minutes} min</span></button>)}</div>}<div className={`timer-wrap ${isRunning ? 'is-running' : ''}`}><svg className="timer-ring" viewBox="0 0 300 300"><circle className="ring-track" cx="150" cy="150" r={radius} /><circle className="ring-progress" cx="150" cy="150" r={radius} style={{ strokeDasharray: circumference, strokeDashoffset: circumference * (1 - progress) }} /></svg><div className="timer-content"><span>{isCountup ? '已专注' : MODES[activeMode].label}</span><strong>{formatTime(displayedSeconds)}</strong><small>{isRunning ? '保持这个节奏' : '准备好就开始'}</small></div></div><div className="timer-controls"><button className="primary-button" onClick={toggleTimer}>{isRunning ? <Pause size={17} /> : <Play size={17} fill="currentColor" />}{isRunning ? '暂停' : '开始专注'}</button><button className="secondary-button" onClick={resetTimer}><RotateCcw size={16} />重置</button>{!isCountup && <button className="secondary-button" onClick={() => changeMode(activeMode === 'focus' ? 'short' : 'focus')}><SkipForward size={16} />跳过</button>}</div><FocusHistory sessions={sessions} /></> : renderTaskEntry()}</section><RightPanel todos={todos} setTodos={setTodos} todoInput={todoInput} setTodoInput={setTodoInput} addTodo={addTodo} memoNotes={memoNotes} setMemoNotes={setMemoNotes} rightPanelView={rightPanelView} setRightPanelView={setRightPanelView} notes={notes} noteInput={noteInput} setNoteInput={setNoteInput} addNote={addNote} expandedNote={expandedNote} setExpandedNote={setExpandedNote} /><section className="content-panel todo-panel legacy-panel"><div className="section-title-row"><div><span className="section-kicker"><CheckCircle2 size={15} />普通待办</span><h2>把日常留在这里。</h2></div></div><div className="task-list todo-list">{todos.map((todo: Todo) => <div className={`task-row ${todo.done ? 'is-done' : ''}`} key={todo.id}><button className="check-button" onClick={() => setTodos((items: Todo[]) => items.map((item) => item.id === todo.id ? { ...item, done: !item.done } : item))}>{todo.done && <Check size={14} />}</button><span className="task-text">{todo.text}</span><button className="delete-button" onClick={() => setTodos((items: Todo[]) => items.filter((item) => item.id !== todo.id))}><Trash2 size={15} /></button></div>)}</div><div className="add-task todo-add"><Plus size={16} /><input value={todoInput} onChange={(event) => setTodoInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') addTodo(); }} placeholder="添加一件待办" /></div><div className="notes-divider"><span>快速记录</span><i /></div><div className="quick-note"><textarea value={noteInput} onChange={(event) => setNoteInput(event.target.value)} placeholder="此刻有什么想法？写下来就好..." /><button onClick={addNote} disabled={!noteInput.trim()}>保存记录</button></div>{notes.slice(0, 2).map((note: Note) => <button className="note-preview" key={note.id} onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)}><span>{note.createdAt}</span><b>{note.text}</b></button>)}</section></div></section><footer className="app-footer"><span><span className="footer-dot" />今天也要照顾好自己</span><span>MomoFocus <b>·</b> 让专注有一点温度</span></footer></> }
+type TimerViewProps = {
+  todos: Todo[];
+  selectedTask: FocusTask | null;
+  setTodos: Dispatch<SetStateAction<Todo[]>>;
+  todoInput: string;
+  setTodoInput: Dispatch<SetStateAction<string>>;
+  addTodo: () => void;
+  notes: Note[];
+  noteInput: string;
+  setNoteInput: Dispatch<SetStateAction<string>>;
+  addNote: () => void;
+  expandedNote: number | null;
+  setExpandedNote: Dispatch<SetStateAction<number | null>>;
+  memoNotes: MemoNote[];
+  setMemoNotes: Dispatch<SetStateAction<MemoNote[]>>;
+  rightPanelView: RightPanelView;
+  setRightPanelView: Dispatch<SetStateAction<RightPanelView>>;
+  totalRounds: number;
+  doneCount: number;
+  renderTaskEntry: () => JSX.Element;
+  isCountup: boolean;
+  mode: Mode;
+  changeMode: (next: Mode) => void;
+  displayedSeconds: number;
+  radius: number;
+  circumference: number;
+  progress: number;
+  isRunning: boolean;
+  remaining: number;
+  completionMessage: string;
+  toggleTimer: () => void;
+  resetTimer: () => void;
+  skipPhase: () => void;
+  exitTask: () => void;
+  sessions: FocusSession[];
+  setView: (view: View) => void;
+};
 
-function RightPanel({ todos, setTodos, todoInput, setTodoInput, addTodo, memoNotes, setMemoNotes, rightPanelView, setRightPanelView, notes, noteInput, setNoteInput, addNote, expandedNote, setExpandedNote }: { todos: Todo[]; setTodos: Dispatch<SetStateAction<Todo[]>>; todoInput: string; setTodoInput: Dispatch<SetStateAction<string>>; addTodo: () => void; memoNotes: MemoNote[]; setMemoNotes: Dispatch<SetStateAction<MemoNote[]>>; rightPanelView: RightPanelView; setRightPanelView: Dispatch<SetStateAction<RightPanelView>>; notes: Note[]; noteInput: string; setNoteInput: Dispatch<SetStateAction<string>>; addNote: () => void; expandedNote: number | null; setExpandedNote: Dispatch<SetStateAction<number | null>> }) {
-  const [selectedMemoId, setSelectedMemoId] = useState<number | null>(memoNotes[0]?.id ?? null);
-  const selectedMemo = memoNotes.find((note) => note.id === selectedMemoId) ?? null;
+function TimerView(props: TimerViewProps) {
+  const {
+    todos,
+    selectedTask,
+    setTodos,
+    todoInput,
+    setTodoInput,
+    addTodo,
+    notes,
+    noteInput,
+    setNoteInput,
+    addNote,
+    expandedNote,
+    setExpandedNote,
+    memoNotes,
+    setMemoNotes,
+    rightPanelView,
+    setRightPanelView,
+    totalRounds,
+    doneCount,
+    renderTaskEntry,
+    isCountup,
+    mode,
+    changeMode,
+    displayedSeconds,
+    radius,
+    circumference,
+    progress,
+    isRunning,
+    remaining,
+    completionMessage,
+    toggleTimer,
+    resetTimer,
+    skipPhase,
+    exitTask,
+    sessions,
+    setView,
+  } = props;
+  const activeMode = mode as Mode;
+  return (
+    <>
+      <section className="workspace">
+        <aside className="side-rail">
+          <div className="welcome-copy">
+            <span className="eyebrow">{dateLabel()}</span>
+            <h1>
+              慢一点，
+              <br />
+              <em>也很好。</em>
+            </h1>
+            <p>给今天的自己，留一小段专心的时间。</p>
+          </div>
+          <div className="daily-summary">
+            <div className="summary-head">
+              <span>待办进度</span>
+              <strong>
+                {doneCount}/{todos.length} 事项
+              </strong>
+            </div>
+            <div className="summary-line">
+              <span
+                style={{
+                  width: `${todos.length ? (doneCount / todos.length) * 100 : 0}%`,
+                }}
+              />
+            </div>
+            <div className="summary-foot">
+              <span>
+                <CheckCircle2 size={14} /> 已完成 {doneCount} 件
+              </span>
+              <span>{totalRounds} 个番茄</span>
+            </div>
+          </div>
+          <button className="stats-nav" onClick={() => setView("stats")}>
+            <BarChart3 size={16} />
+            查看专注统计
+            <TrendingUp size={14} />
+          </button>
+          <div className="rail-note">
+            <Sparkles size={16} />
+            <span>
+              专注不是把事情做完，
+              <br />
+              是把注意力带回来。
+            </span>
+          </div>
+        </aside>
+        <div className="main-grid">
+          <section
+            className={`focus-panel ${selectedTask ? "has-selection" : "no-selection"}`}
+          >
+            {selectedTask ? (
+              <>
+                <div className="section-kicker">
+                  <span>
+                    {isCountup ? <Timer size={15} /> : <Clock3 size={15} />}
+                    {isCountup ? "正计时时钟" : "专注时钟"}
+                    <b className="active-task-label">· {selectedTask.text}</b>
+                  </span>
+                  <span className="live-label">
+                    <i />
+                    {isRunning
+                      ? "正在进行"
+                      : !isCountup && remaining === 0
+                        ? "本轮完成"
+                        : "准备开始"}
+                  </span>
+                  <button
+                    className="exit-task-button"
+                    aria-label="退出当前任务"
+                    onClick={exitTask}
+                  >
+                    <ArrowLeft size={14} />
+                    退出任务
+                  </button>
+                </div>
+                {!isCountup && (
+                  <div className="mode-tabs">
+                    {(Object.keys(MODES) as Mode[]).map((key) => (
+                      <button
+                        key={key}
+                        className={activeMode === key ? "active" : ""}
+                        onClick={() => changeMode(key)}
+                      >
+                        {MODES[key].label}
+                        <span>{MODES[key].minutes} min</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className={`timer-wrap ${isRunning ? "is-running" : ""}`}>
+                  <svg className="timer-ring" viewBox="0 0 300 300">
+                    <circle
+                      className="ring-track"
+                      cx="150"
+                      cy="150"
+                      r={radius}
+                    />
+                    <circle
+                      className="ring-progress"
+                      cx="150"
+                      cy="150"
+                      r={radius}
+                      style={{
+                        strokeDasharray: circumference,
+                        strokeDashoffset: circumference * (1 - progress),
+                      }}
+                    />
+                  </svg>
+                  <div className="timer-content">
+                    <span>
+                      {isCountup ? "已专注" : MODES[activeMode].label}
+                    </span>
+                    <strong>{formatTime(displayedSeconds)}</strong>
+                    <small>
+                      {completionMessage ||
+                        (isRunning ? "保持这个节奏" : "准备好就开始")}
+                    </small>
+                  </div>
+                </div>
+                <div className="timer-controls">
+                  <button
+                    className="primary-button"
+                    aria-label={isRunning ? "暂停计时" : "开始计时"}
+                    onClick={toggleTimer}
+                  >
+                    {isRunning ? (
+                      <Pause size={17} />
+                    ) : (
+                      <Play size={17} fill="currentColor" />
+                    )}
+                    {isRunning
+                      ? "暂停"
+                      : remaining === 0
+                        ? "开始下一阶段"
+                        : activeMode === "focus"
+                          ? "开始专注"
+                          : `开始${MODES[activeMode].label}`}
+                  </button>
+                  <button
+                    className="secondary-button"
+                    aria-label="重置当前阶段"
+                    onClick={resetTimer}
+                  >
+                    <RotateCcw size={16} />
+                    重置
+                  </button>
+                  {!isCountup && (
+                    <button className="secondary-button" onClick={skipPhase}>
+                      <SkipForward size={16} />
+                      跳过
+                    </button>
+                  )}
+                </div>
+                <FocusHistory sessions={sessions} />
+              </>
+            ) : (
+              renderTaskEntry()
+            )}
+          </section>
+          <RightPanel
+            todos={todos}
+            setTodos={setTodos}
+            todoInput={todoInput}
+            setTodoInput={setTodoInput}
+            addTodo={addTodo}
+            memoNotes={memoNotes}
+            setMemoNotes={setMemoNotes}
+            rightPanelView={rightPanelView}
+            setRightPanelView={setRightPanelView}
+            notes={notes}
+            noteInput={noteInput}
+            setNoteInput={setNoteInput}
+            addNote={addNote}
+            expandedNote={expandedNote}
+            setExpandedNote={setExpandedNote}
+          />
+          <section className="content-panel todo-panel legacy-panel">
+            <div className="section-title-row">
+              <div>
+                <span className="section-kicker">
+                  <CheckCircle2 size={15} />
+                  普通待办
+                </span>
+                <h2>把日常留在这里。</h2>
+              </div>
+            </div>
+            <div className="task-list todo-list">
+              {todos.map((todo: Todo) => (
+                <div
+                  className={`task-row ${todo.done ? "is-done" : ""}`}
+                  key={todo.id}
+                >
+                  <button
+                    className="check-button"
+                    onClick={() =>
+                      setTodos((items: Todo[]) =>
+                        items.map((item) =>
+                          item.id === todo.id
+                            ? { ...item, done: !item.done }
+                            : item,
+                        ),
+                      )
+                    }
+                  >
+                    {todo.done && <Check size={14} />}
+                  </button>
+                  <span className="task-text">{todo.text}</span>
+                  <button
+                    className="delete-button"
+                    onClick={() =>
+                      setTodos((items: Todo[]) =>
+                        items.filter((item) => item.id !== todo.id),
+                      )
+                    }
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="add-task todo-add">
+              <Plus size={16} />
+              <input
+                value={todoInput}
+                onChange={(event) => setTodoInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") addTodo();
+                }}
+                placeholder="添加一件待办"
+              />
+            </div>
+            <div className="notes-divider">
+              <span>快速记录</span>
+              <i />
+            </div>
+            <div className="quick-note">
+              <textarea
+                value={noteInput}
+                onChange={(event) => setNoteInput(event.target.value)}
+                placeholder="此刻有什么想法？写下来就好..."
+              />
+              <button onClick={addNote} disabled={!noteInput.trim()}>
+                保存记录
+              </button>
+            </div>
+            {notes.slice(0, 2).map((note: Note) => (
+              <button
+                className="note-preview"
+                key={note.id}
+                onClick={() =>
+                  setExpandedNote(expandedNote === note.id ? null : note.id)
+                }
+              >
+                <span>{note.createdAt}</span>
+                <b>{note.text}</b>
+              </button>
+            ))}
+          </section>
+        </div>
+      </section>
+      <footer className="app-footer">
+        <span>
+          <span className="footer-dot" />
+          今天也要照顾好自己
+        </span>
+        <span>
+          MomoFocus <b>·</b> 让专注有一点温度
+        </span>
+      </footer>
+    </>
+  );
+}
+
+function RightPanel({
+  todos,
+  setTodos,
+  todoInput,
+  setTodoInput,
+  addTodo,
+  memoNotes,
+  setMemoNotes,
+  rightPanelView,
+  setRightPanelView,
+  notes,
+  noteInput,
+  setNoteInput,
+  addNote,
+  expandedNote,
+  setExpandedNote,
+}: {
+  todos: Todo[];
+  setTodos: Dispatch<SetStateAction<Todo[]>>;
+  todoInput: string;
+  setTodoInput: Dispatch<SetStateAction<string>>;
+  addTodo: () => void;
+  memoNotes: MemoNote[];
+  setMemoNotes: Dispatch<SetStateAction<MemoNote[]>>;
+  rightPanelView: RightPanelView;
+  setRightPanelView: Dispatch<SetStateAction<RightPanelView>>;
+  notes: Note[];
+  noteInput: string;
+  setNoteInput: Dispatch<SetStateAction<string>>;
+  addNote: () => void;
+  expandedNote: number | null;
+  setExpandedNote: Dispatch<SetStateAction<number | null>>;
+}) {
+  const [selectedMemoId, setSelectedMemoId] = useState<number | null>(
+    memoNotes[0]?.id ?? null,
+  );
+  const selectedMemo =
+    memoNotes.find((note) => note.id === selectedMemoId) ?? null;
 
   useEffect(() => {
-    if (selectedMemoId !== null && memoNotes.some((note) => note.id === selectedMemoId)) return;
+    if (
+      selectedMemoId !== null &&
+      memoNotes.some((note) => note.id === selectedMemoId)
+    )
+      return;
     setSelectedMemoId(memoNotes[0]?.id ?? null);
   }, [memoNotes, selectedMemoId]);
 
   const createMemo = () => {
     const now = new Date().toISOString();
-    const newMemo = { id: Date.now(), title: '新备忘录', body: '', createdAt: now, updatedAt: now };
+    const newMemo = {
+      id: nextId(),
+      title: "新备忘录",
+      body: "",
+      createdAt: now,
+      updatedAt: now,
+    };
     setMemoNotes((items) => [newMemo, ...items]);
     setSelectedMemoId(newMemo.id);
-    setRightPanelView('notes');
+    setRightPanelView("notes");
   };
-  const updateMemo = (field: 'title' | 'body', value: string) => {
+  const updateMemo = (field: "title" | "body", value: string) => {
     if (!selectedMemo) return;
-    setMemoNotes((items) => items.map((note) => note.id === selectedMemo.id ? { ...note, [field]: value, updatedAt: new Date().toISOString() } : note));
+    setMemoNotes((items) =>
+      items.map((note) =>
+        note.id === selectedMemo.id
+          ? { ...note, [field]: value, updatedAt: new Date().toISOString() }
+          : note,
+      ),
+    );
   };
   const deleteMemo = () => {
     if (!selectedMemo) return;
     const index = memoNotes.findIndex((note) => note.id === selectedMemo.id);
     const nextMemo = memoNotes[index + 1] ?? memoNotes[index - 1] ?? null;
-    setMemoNotes((items) => items.filter((note) => note.id !== selectedMemo.id));
+    setMemoNotes((items) =>
+      items.filter((note) => note.id !== selectedMemo.id),
+    );
     setSelectedMemoId(nextMemo?.id ?? null);
   };
   const noteTime = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     const today = new Date();
-    if (date.toDateString() === today.toDateString()) return `今天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
-    return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+    if (date.toDateString() === today.toDateString())
+      return `今天 ${date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
+    return date.toLocaleDateString("zh-CN", {
+      month: "numeric",
+      day: "numeric",
+    });
   };
 
-  return <section className="content-panel right-panel">
-    <div className="view-tabs" role="tablist" aria-label="右侧工作区">
-      <button role="tab" aria-selected={rightPanelView === 'todo'} className={rightPanelView === 'todo' ? 'active' : ''} onClick={() => setRightPanelView('todo')}><CheckCircle2 size={15} />Todo<span className="task-count">{todos.length}</span></button>
-      <button role="tab" aria-selected={rightPanelView === 'notes'} className={rightPanelView === 'notes' ? 'active' : ''} onClick={() => setRightPanelView('notes')}><FileText size={15} />备忘录<span className="task-count">{memoNotes.length}</span></button>
+  return (
+    <section className="content-panel right-panel">
+      <div className="view-tabs" role="tablist" aria-label="右侧工作区">
+        <button
+          role="tab"
+          aria-selected={rightPanelView === "todo"}
+          className={rightPanelView === "todo" ? "active" : ""}
+          onClick={() => setRightPanelView("todo")}
+        >
+          <CheckCircle2 size={15} />
+          Todo<span className="task-count">{todos.length}</span>
+        </button>
+        <button
+          role="tab"
+          aria-selected={rightPanelView === "notes"}
+          className={rightPanelView === "notes" ? "active" : ""}
+          onClick={() => setRightPanelView("notes")}
+        >
+          <FileText size={15} />
+          备忘录<span className="task-count">{memoNotes.length}</span>
+        </button>
+      </div>
+      {rightPanelView === "todo" ? (
+        <>
+          <div className="section-title-row">
+            <div>
+              <span className="section-kicker">
+                <CheckCircle2 size={15} />
+                普通待办
+              </span>
+              <h2>把日常留在这里。</h2>
+            </div>
+          </div>
+          <div className="task-list todo-list">
+            {todos.map((todo) => (
+              <div
+                className={`task-row ${todo.done ? "is-done" : ""}`}
+                key={todo.id}
+              >
+                <button
+                  className="check-button"
+                  aria-label={
+                    todo.done ? `标记${todo.text}为未完成` : `完成${todo.text}`
+                  }
+                  onClick={() =>
+                    setTodos((items) =>
+                      items.map((item) =>
+                        item.id === todo.id
+                          ? { ...item, done: !item.done }
+                          : item,
+                      ),
+                    )
+                  }
+                >
+                  {todo.done && <Check size={14} />}
+                </button>
+                <span className="task-text">{todo.text}</span>
+                <button
+                  className="delete-button"
+                  aria-label={`删除${todo.text}`}
+                  onClick={() =>
+                    setTodos((items) =>
+                      items.filter((item) => item.id !== todo.id),
+                    )
+                  }
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="add-task todo-add">
+            <Plus size={16} />
+            <input
+              value={todoInput}
+              onChange={(event) => setTodoInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") addTodo();
+              }}
+              placeholder="添加一件待办"
+              aria-label="添加一件待办"
+            />
+          </div>
+          <div className="notes-divider">
+            <span>快速记录</span>
+            <i />
+          </div>
+          <div className="quick-note">
+            <textarea
+              value={noteInput}
+              onChange={(event) => setNoteInput(event.target.value)}
+              placeholder="此刻有什么想法？写下来就好..."
+              aria-label="快速记录"
+            />
+            <button onClick={addNote} disabled={!noteInput.trim()}>
+              保存记录
+            </button>
+          </div>
+          {notes.slice(0, 2).map((note) => (
+            <button
+              className="note-preview"
+              key={note.id}
+              onClick={() =>
+                setExpandedNote(expandedNote === note.id ? null : note.id)
+              }
+            >
+              <span>{note.createdAt}</span>
+              <b>{note.text}</b>
+            </button>
+          ))}
+        </>
+      ) : (
+        <div className="memo-panel">
+          <div className="memo-heading">
+            <div>
+              <span className="section-kicker">
+                <FileText size={15} />
+                我的备忘录
+              </span>
+              <h2>把想法留在这里。</h2>
+            </div>
+            <button
+              className="memo-new-button"
+              onClick={createMemo}
+              aria-label="新建备忘录"
+            >
+              <Plus size={16} />
+              新建
+            </button>
+          </div>
+          <div className="memo-list" role="listbox" aria-label="备忘录列表">
+            {memoNotes.map((note) => (
+              <button
+                key={note.id}
+                role="option"
+                aria-selected={selectedMemoId === note.id}
+                className={`memo-list-item ${selectedMemoId === note.id ? "active" : ""}`}
+                onClick={() => setSelectedMemoId(note.id)}
+              >
+                <strong>{note.title || "无标题"}</strong>
+                <span>{note.body || "暂无内容"}</span>
+                <time>{noteTime(note.updatedAt)}</time>
+              </button>
+            ))}
+          </div>
+          {selectedMemo ? (
+            <div className="memo-editor">
+              <div className="memo-editor-toolbar">
+                <span>自动保存</span>
+                <button
+                  className="delete-button"
+                  onClick={deleteMemo}
+                  aria-label="删除当前备忘录"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+              <input
+                className="memo-title-input"
+                value={selectedMemo.title}
+                onChange={(event) => updateMemo("title", event.target.value)}
+                placeholder="标题"
+                aria-label="备忘录标题"
+              />
+              <textarea
+                className="memo-body-input"
+                value={selectedMemo.body}
+                onChange={(event) => updateMemo("body", event.target.value)}
+                placeholder="开始记录..."
+                aria-label="备忘录正文"
+              />
+            </div>
+          ) : (
+            <div className="memo-empty">
+              <FileText size={28} />
+              <strong>还没有备忘录</strong>
+              <span>记录一个想法，让它有地方安放。</span>
+              <button className="primary-button" onClick={createMemo}>
+                <Plus size={16} />
+                新建备忘录
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function FocusHistory({ sessions }: { sessions: FocusSession[] }) {
+  return (
+    <div className="focus-history">
+      <div className="history-heading">
+        <span>
+          <BarChart3 size={14} />
+          专注历史
+        </span>
+        <small>{sessions.length} 次记录</small>
+      </div>
+      {sessions.length === 0 ? (
+        <p className="empty-history">完成一次专注后，记录会出现在这里。</p>
+      ) : (
+        sessions.slice(0, 3).map((session) => (
+          <div className="session-list" key={session.id}>
+            <div>
+              <i className="session-dot" />
+              <b>{session.taskName}</b>
+              <span>{formatDuration(session.seconds)}</span>
+            </div>
+          </div>
+        ))
+      )}
     </div>
-    {rightPanelView === 'todo' ? <>
-      <div className="section-title-row"><div><span className="section-kicker"><CheckCircle2 size={15} />普通待办</span><h2>把日常留在这里。</h2></div></div>
-      <div className="task-list todo-list">{todos.map((todo) => <div className={`task-row ${todo.done ? 'is-done' : ''}`} key={todo.id}><button className="check-button" aria-label={todo.done ? `标记${todo.text}为未完成` : `完成${todo.text}`} onClick={() => setTodos((items) => items.map((item) => item.id === todo.id ? { ...item, done: !item.done } : item))}>{todo.done && <Check size={14} />}</button><span className="task-text">{todo.text}</span><button className="delete-button" aria-label={`删除${todo.text}`} onClick={() => setTodos((items) => items.filter((item) => item.id !== todo.id))}><Trash2 size={15} /></button></div>)}</div>
-      <div className="add-task todo-add"><Plus size={16} /><input value={todoInput} onChange={(event) => setTodoInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') addTodo(); }} placeholder="添加一件待办" aria-label="添加一件待办" /></div>
-      <div className="notes-divider"><span>快速记录</span><i /></div><div className="quick-note"><textarea value={noteInput} onChange={(event) => setNoteInput(event.target.value)} placeholder="此刻有什么想法？写下来就好..." aria-label="快速记录" /><button onClick={addNote} disabled={!noteInput.trim()}>保存记录</button></div>{notes.slice(0, 2).map((note) => <button className="note-preview" key={note.id} onClick={() => setExpandedNote(expandedNote === note.id ? null : note.id)}><span>{note.createdAt}</span><b>{note.text}</b></button>)}
-    </> : <div className="memo-panel">
-      <div className="memo-heading"><div><span className="section-kicker"><FileText size={15} />我的备忘录</span><h2>把想法留在这里。</h2></div><button className="memo-new-button" onClick={createMemo} aria-label="新建备忘录"><Plus size={16} />新建</button></div>
-      <div className="memo-list" role="listbox" aria-label="备忘录列表">{memoNotes.map((note) => <button key={note.id} role="option" aria-selected={selectedMemoId === note.id} className={`memo-list-item ${selectedMemoId === note.id ? 'active' : ''}`} onClick={() => setSelectedMemoId(note.id)}><strong>{note.title || '无标题'}</strong><span>{note.body || '暂无内容'}</span><time>{noteTime(note.updatedAt)}</time></button>)}</div>
-      {selectedMemo ? <div className="memo-editor"><div className="memo-editor-toolbar"><span>自动保存</span><button className="delete-button" onClick={deleteMemo} aria-label="删除当前备忘录"><Trash2 size={15} /></button></div><input className="memo-title-input" value={selectedMemo.title} onChange={(event) => updateMemo('title', event.target.value)} placeholder="标题" aria-label="备忘录标题" /><textarea className="memo-body-input" value={selectedMemo.body} onChange={(event) => updateMemo('body', event.target.value)} placeholder="开始记录..." aria-label="备忘录正文" /></div> : <div className="memo-empty"><FileText size={28} /><strong>还没有备忘录</strong><span>记录一个想法，让它有地方安放。</span><button className="primary-button" onClick={createMemo}><Plus size={16} />新建备忘录</button></div>}
-    </div>}
-  </section>;
+  );
 }
 
-function FocusHistory({ sessions }: { sessions: FocusSession[] }) { return <div className="focus-history"><div className="history-heading"><span><BarChart3 size={14} />专注历史</span><small>{sessions.length} 次记录</small></div>{sessions.length === 0 ? <p className="empty-history">完成一次专注后，记录会出现在这里。</p> : sessions.slice(0, 3).map((session) => <div className="session-list" key={session.id}><div><i className="session-dot" /><b>{session.taskName}</b><span>{formatDuration(session.seconds)}</span></div></div>)}</div>; }
-
-function StatsView({ sessions, filter, setFilter, customStart, setCustomStart, customEnd, setCustomEnd }: { sessions: FocusSession[]; filter: Filter; setFilter: (v: Filter) => void; customStart: string; setCustomStart: (v: string) => void; customEnd: string; setCustomEnd: (v: string) => void }) {
-  const today = new Date(); const range = useMemo(() => { if (filter === 'custom') return { start: customStart, end: customEnd }; if (filter === 'day') return { start: dateKey(), end: dateKey() }; if (filter === 'week') return { start: dateKey(startOfWeek(today)), end: dateKey(today) }; return { start: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`, end: dateKey(today) }; }, [filter, customStart, customEnd]);
-  const selected = sessions.filter((s) => (s.date ?? dateKey()) >= range.start && (s.date ?? dateKey()) <= range.end); const completed = selected.filter((s) => (s.status ?? 'completed') === 'completed'); const totalSeconds = selected.reduce((sum, s) => sum + s.seconds, 0); const abandon = selected.filter((s) => s.status === 'abandoned').length; const buckets = [0, 0, 0, 0]; selected.forEach((s) => { const minutes = s.seconds / 60; buckets[minutes < 15 ? 0 : minutes < 25 ? 1 : minutes < 45 ? 2 : 3] += s.seconds; }); const bucketTotal = buckets.reduce((a, b) => a + b, 0); let angle = 0; const gradient = bucketTotal ? buckets.map((value, i) => { const start = angle; angle += value / bucketTotal * 360; return `${['#e75c49', '#e7a25c', '#88bda9', '#766d9c'][i]} ${start}deg ${angle}deg`; }).join(', ') : '#e5e0d4 0deg 360deg'; const average = range.start && range.end ? Math.round(totalSeconds / Math.max(1, Math.round((new Date(range.end).getTime() - new Date(range.start).getTime()) / 86400000) + 1)) : 0;
-  const monthKey = dateKey(today).slice(0, 7); const monthSessions = sessions.filter((s) => (s.date ?? dateKey()).startsWith(monthKey)); const slots = Array.from({ length: 5 }, (_, i) => monthSessions.filter((s) => { const hour = s.startedAt ? new Date(s.startedAt).getHours() : 9; return hour >= [6, 10, 14, 18, 22][i] && hour < [10, 14, 18, 22, 24][i]; }).reduce((sum, s) => sum + s.seconds, 0)); const maxSlot = Math.max(...slots, 1);
-  return <section className="stats-page"><div className="stats-heading"><div><span className="eyebrow">FOCUS INSIGHTS · 专注洞察</span><h1>看见你的专注<br /><em>如何发生。</em></h1></div><div className="stats-heading-note"><Target size={18} /><span>每一次开始，<br />都算数。</span></div></div><div className="filter-bar"><div className="filter-tabs">{([['day', '今日'], ['week', '本周'], ['month', '本月'], ['custom', '自定义']] as [Filter, string][]).map(([key, label]) => <button key={key} className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{label}</button>)}</div>{filter === 'custom' && <div className="date-fields"><label>从<input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} /></label><span>—</span><label>至<input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} /></label></div>}<span className="range-label"><CalendarDays size={14} />{range.start === range.end ? range.start : `${range.start} — ${range.end}`}</span></div><div className="stats-grid"><div className="metric-card accent"><span>专注次数</span><strong>{completed.length}</strong><small>完成的专注记录</small></div><div className="metric-card"><span>专注时长</span><strong>{formatDuration(totalSeconds)}</strong><small>本筛选范围累计</small></div><div className="metric-card"><span>放弃次数</span><strong>{abandon}</strong><small>中途结束的记录</small></div></div><div className="stats-columns"><section className="stat-card distribution-card"><div className="card-heading"><div><span className="section-kicker"><Clock3 size={15} />时长分布</span><h2>每次专注多久？</h2></div><small>{selected.length} 条记录</small></div>{selected.length === 0 ? <EmptyStats /> : <div className="donut-layout"><div className="donut" style={{ background: `conic-gradient(${gradient})` }}><div><strong>{formatDuration(totalSeconds)}</strong><span>总专注</span></div></div><div className="legend">{['15 分钟以内', '15—25 分钟', '25—45 分钟', '45 分钟以上'].map((label, i) => <div key={label}><i style={{ background: ['#e75c49', '#e7a25c', '#88bda9', '#766d9c'][i] }} /><span>{label}</span><b>{bucketTotal ? Math.round(buckets[i] / bucketTotal * 100) : 0}%</b></div>)}</div></div>}</section><section className="stat-card average-card"><div className="card-heading"><div><span className="section-kicker"><TrendingUp size={15} />持续节奏</span><h2>累计与日均</h2></div></div><div className="big-stat"><strong>{completed.length}</strong><span>累计专注次数</span></div><div className="big-stat"><strong>{formatDuration(average)}</strong><span>范围内日均时长</span></div></section></div><section className="stat-card time-chart-card"><div className="card-heading"><div><span className="section-kicker"><BarChart3 size={15} />本月专注时段</span><h2>你通常在什么时候进入状态？</h2></div><small>{monthSessions.length} 条本月记录</small></div><div className="time-chart">{slots.map((value, i) => <div className="time-column" key={i}><div className="bar-track"><span style={{ height: `${value / maxSlot * 100}%` }} /></div><b>{['06—10', '10—14', '14—18', '18—22', '22—02'][i]}</b><small>{value ? formatDuration(value) : '暂无'}</small></div>)}</div></section></section>;
+function StatsView({
+  sessions,
+  filter,
+  setFilter,
+  customStart,
+  setCustomStart,
+  customEnd,
+  setCustomEnd,
+}: {
+  sessions: FocusSession[];
+  filter: Filter;
+  setFilter: (v: Filter) => void;
+  customStart: string;
+  setCustomStart: (v: string) => void;
+  customEnd: string;
+  setCustomEnd: (v: string) => void;
+}) {
+  const today = new Date();
+  const range = useMemo(() => {
+    if (filter === "custom") return { start: customStart, end: customEnd };
+    if (filter === "day") return { start: dateKey(), end: dateKey() };
+    if (filter === "week")
+      return { start: dateKey(startOfWeek(today)), end: dateKey(today) };
+    return {
+      start: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`,
+      end: dateKey(today),
+    };
+  }, [filter, customStart, customEnd]);
+  const validRange = Boolean(
+    range.start && range.end && range.start <= range.end,
+  );
+  const selected = validRange
+    ? sessions.filter(
+        (s) =>
+          (s.date ?? dateKey()) >= range.start &&
+          (s.date ?? dateKey()) <= range.end,
+      )
+    : [];
+  const completed = selected.filter(
+    (s) => (s.status ?? "completed") === "completed",
+  );
+  const totalSeconds = selected.reduce((sum, s) => sum + s.seconds, 0);
+  const abandon = selected.filter((s) => s.status === "abandoned").length;
+  const buckets = [0, 0, 0, 0];
+  selected.forEach((s) => {
+    const minutes = s.seconds / 60;
+    buckets[minutes < 15 ? 0 : minutes < 25 ? 1 : minutes < 45 ? 2 : 3] +=
+      s.seconds;
+  });
+  const bucketTotal = buckets.reduce((a, b) => a + b, 0);
+  let angle = 0;
+  const gradient = bucketTotal
+    ? buckets
+        .map((value, i) => {
+          const start = angle;
+          angle += (value / bucketTotal) * 360;
+          return `${["#e75c49", "#e7a25c", "#88bda9", "#766d9c"][i]} ${start}deg ${angle}deg`;
+        })
+        .join(", ")
+    : "#e5e0d4 0deg 360deg";
+  const average =
+    range.start && range.end
+      ? Math.round(
+          totalSeconds /
+            Math.max(
+              1,
+              Math.round(
+                (new Date(range.end).getTime() -
+                  new Date(range.start).getTime()) /
+                  86400000,
+              ) + 1,
+            ),
+        )
+      : 0;
+  const monthKey = dateKey(today).slice(0, 7);
+  const monthSessions = sessions.filter((s) =>
+    (s.date ?? dateKey()).startsWith(monthKey),
+  );
+  const slots = Array.from({ length: 5 }, (_, i) =>
+    monthSessions
+      .filter((s) => {
+        const hour = s.startedAt ? new Date(s.startedAt).getHours() : 9;
+        return hour >= [6, 10, 14, 18, 22][i] && hour < [10, 14, 18, 22, 24][i];
+      })
+      .reduce((sum, s) => sum + s.seconds, 0),
+  );
+  const maxSlot = Math.max(...slots, 1);
+  return (
+    <section className="stats-page">
+      <div className="stats-heading">
+        <div>
+          <span className="eyebrow">FOCUS INSIGHTS · 专注洞察</span>
+          <h1>
+            看见你的专注
+            <br />
+            <em>如何发生。</em>
+          </h1>
+        </div>
+        <div className="stats-heading-note">
+          <Target size={18} />
+          <span>
+            每一次开始，
+            <br />
+            都算数。
+          </span>
+        </div>
+      </div>
+      <div className="filter-bar">
+        <div className="filter-tabs">
+          {(
+            [
+              ["day", "今日"],
+              ["week", "本周"],
+              ["month", "本月"],
+              ["custom", "自定义"],
+            ] as [Filter, string][]
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              className={filter === key ? "active" : ""}
+              onClick={() => setFilter(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {filter === "custom" && (
+          <div className="date-fields">
+            <label>
+              从
+              <input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+              />
+            </label>
+            <span>—</span>
+            <label>
+              至
+              <input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+              />
+            </label>
+          </div>
+        )}
+        {filter === "custom" && !validRange && (
+          <span className="range-error">请选择有效的日期范围</span>
+        )}
+        <span className="range-label">
+          <CalendarDays size={14} />
+          {range.start === range.end
+            ? range.start
+            : `${range.start} — ${range.end}`}
+        </span>
+      </div>
+      <div className="stats-grid">
+        <div className="metric-card accent">
+          <span>专注次数</span>
+          <strong>{completed.length}</strong>
+          <small>完成的专注记录</small>
+        </div>
+        <div className="metric-card">
+          <span>专注时长</span>
+          <strong>{formatDuration(totalSeconds)}</strong>
+          <small>本筛选范围累计</small>
+        </div>
+        <div className="metric-card">
+          <span>放弃次数</span>
+          <strong>{abandon}</strong>
+          <small>中途结束的记录</small>
+        </div>
+      </div>
+      <div className="stats-columns">
+        <section className="stat-card distribution-card">
+          <div className="card-heading">
+            <div>
+              <span className="section-kicker">
+                <Clock3 size={15} />
+                时长分布
+              </span>
+              <h2>每次专注多久？</h2>
+            </div>
+            <small>{selected.length} 条记录</small>
+          </div>
+          {selected.length === 0 ? (
+            <EmptyStats />
+          ) : (
+            <div className="donut-layout">
+              <div
+                className="donut"
+                style={{ background: `conic-gradient(${gradient})` }}
+              >
+                <div>
+                  <strong>{formatDuration(totalSeconds)}</strong>
+                  <span>总专注</span>
+                </div>
+              </div>
+              <div className="legend">
+                {["15 分钟以内", "15—25 分钟", "25—45 分钟", "45 分钟以上"].map(
+                  (label, i) => (
+                    <div key={label}>
+                      <i
+                        style={{
+                          background: [
+                            "#e75c49",
+                            "#e7a25c",
+                            "#88bda9",
+                            "#766d9c",
+                          ][i],
+                        }}
+                      />
+                      <span>{label}</span>
+                      <b>
+                        {bucketTotal
+                          ? Math.round((buckets[i] / bucketTotal) * 100)
+                          : 0}
+                        %
+                      </b>
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+        <section className="stat-card average-card">
+          <div className="card-heading">
+            <div>
+              <span className="section-kicker">
+                <TrendingUp size={15} />
+                持续节奏
+              </span>
+              <h2>累计与日均</h2>
+            </div>
+          </div>
+          <div className="big-stat">
+            <strong>{completed.length}</strong>
+            <span>累计专注次数</span>
+          </div>
+          <div className="big-stat">
+            <strong>{formatDuration(average)}</strong>
+            <span>范围内日均时长</span>
+          </div>
+        </section>
+      </div>
+      <section className="stat-card time-chart-card">
+        <div className="card-heading">
+          <div>
+            <span className="section-kicker">
+              <BarChart3 size={15} />
+              本月专注时段
+            </span>
+            <h2>你通常在什么时候进入状态？</h2>
+          </div>
+          <small>{monthSessions.length} 条本月记录</small>
+        </div>
+        <div className="time-chart">
+          {slots.map((value, i) => (
+            <div className="time-column" key={i}>
+              <div className="bar-track">
+                <span style={{ height: `${(value / maxSlot) * 100}%` }} />
+              </div>
+              <b>{["06—10", "10—14", "14—18", "18—22", "22—02"][i]}</b>
+              <small>{value ? formatDuration(value) : "暂无"}</small>
+            </div>
+          ))}
+        </div>
+      </section>
+    </section>
+  );
 }
-function EmptyStats() { return <div className="stats-empty"><span>○</span><b>这里还没有专注记录</b><small>完成一次专注后，你会在这里看见自己的节奏。</small></div>; }
+function EmptyStats() {
+  return (
+    <div className="stats-empty">
+      <span>○</span>
+      <b>这里还没有专注记录</b>
+      <small>完成一次专注后，你会在这里看见自己的节奏。</small>
+    </div>
+  );
+}
 export default App;

@@ -24,3 +24,16 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - `npm run build`：运行 TypeScript 项目构建并生成 Vite 产物
 - `npm run electron:build`：构建桌面安装包
 - `git diff --check`：检查改动中的空白错误
+
+## 计时闭环状态
+
+- 计时快照使用 `momofocus.timer`，按 `Date.now()` 真实时间恢复倒计时和正计时。
+- 快速记录使用 `momofocus.quickNotes`；声音和系统通知设置使用 `momofocus.settings`。
+- Electron 原生通知通过 `electron/preload.cjs` 暴露的受限 `momoFocusNative.notify` API 调用，主窗口保持隔离上下文。
+- 阶段完成后自动切换到下一阶段但不自动开始；快捷键为 `Space`、`R`、`S` 和 `Escape`。
+
+## 最近验证
+
+- 2026-09-22：`npm run build` 通过。
+- 2026-09-22：`git diff --check` 通过。
+- 2026-09-22：Vite 开发页面启动成功，动态日期和首页交互入口可见。
