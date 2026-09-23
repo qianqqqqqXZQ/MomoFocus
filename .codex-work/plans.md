@@ -40,3 +40,20 @@
 - [x] 点击 Todo 展开历史想法，并支持新增想法。
 - [x] 调整右侧 Todo 面板样式与交互状态。
 - [x] 运行构建、空白检查并完成改动后的代码复核。
+
+## Windows 图标与项目整理
+
+- [x] 统一 Electron 运行时和 electron-builder 的番茄图标资源路径。
+- [x] 增加标准格式化与格式检查命令，并格式化项目源码和配置。
+- [ ] 清理历史临时打包目录 `release-0.1.1`、`release-final`、`release-rebuild`（其中 `app.asar` 被外部进程锁定，待进程退出后清理）；保留标准 `release/`（有正在运行的应用进程）和当前 `dist/`。
+- [x] 在 README 和项目备忘中说明使用 `npm run dev` 加载最新源码，使用 `npm run electron:build` 更新独立桌面包。
+- [x] 运行 `npm run format:check`、`npm run build` 和 `git diff --check`；Electron 安装包验证此前因 GitHub `winCodeSign` 下载连接被重置而中断。
+- [x] 完成改动后的代码复核并记录验证结果。
+
+## 专注统计按钮与自定义标语
+
+- [x] 将左侧专注统计入口调整为独立强调按钮，保持原有跳转行为。
+- [x] 增加首页标语点击编辑、保存、取消及恢复默认交互，支持换行。
+- [x] 将标语保存在 `momofocus.slogan`，空白编辑内容不覆盖已保存标语。
+- [x] 更新项目备忘并完成改动后的代码复核。
+- [x] 运行 `npm run build`、`npm run format:check` 和 `git diff --check`。

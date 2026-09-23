@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "build": "tsc -b && vite build",
+    "format": "prettier --write \"*.{cjs,json,md,ts}\" \"src/**/*.{ts,tsx,css}\" \"electron/**/*.{cjs,js}\"",
+    "format:check": "prettier --check \"*.{cjs,json,md,ts}\" \"src/**/*.{ts,tsx,css}\" \"electron/**/*.{cjs,js}\"",
     "preview": "vite preview",
     "electron:build": "npm run build && electron-builder"
   },
@@ -24,6 +26,7 @@
     "concurrently": "^9.1.0",
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8",
+    "prettier": "^3.5.3",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "wait-on": "^8.0.1"

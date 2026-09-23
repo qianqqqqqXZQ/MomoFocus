@@ -1340,8 +1340,7 @@ function RightPanel({
   const [selectedMemoId, setSelectedMemoId] = useState<number | null>(
     memoNotes[0]?.id ?? null,
   );
-  const selectedTodo =
-    todos.find((todo) => todo.id === selectedTodoId) ?? null;
+  const selectedTodo = todos.find((todo) => todo.id === selectedTodoId) ?? null;
   const selectedMemo =
     memoNotes.find((note) => note.id === selectedMemoId) ?? null;
 
@@ -1505,7 +1504,7 @@ function RightPanel({
                     event.stopPropagation();
                     setTodos((items) =>
                       items.filter((item) => item.id !== todo.id),
-                    )
+                    );
                   }}
                 >
                   <Trash2 size={15} />

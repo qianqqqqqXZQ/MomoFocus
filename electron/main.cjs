@@ -22,7 +22,7 @@ const developmentUrl =
   process.env.VITE_DEV_SERVER_URL || "http://127.0.0.1:5173";
 
 function createWindow() {
-  const iconPath = path.resolve(__dirname, "..", "assets", "tomato.ico");
+  const iconPath = path.join(app.getAppPath(), "assets", "tomato.ico");
 
   const window = new BrowserWindow({
     width: 1180,
