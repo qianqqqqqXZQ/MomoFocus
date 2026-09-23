@@ -16,6 +16,10 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 右侧面板默认显示 `Todo`，可切换到 `备忘录`。
 - Todo 支持点击选中并记录专属想法；想法保存在对应 Todo 的 `thoughts` 字段中，兼容没有该字段的旧数据。
 - 备忘录支持标题、纯文本正文、多篇列表、自动保存和直接删除。
+- 中间专注任务卡点击打开详情，右侧“开始”才启动计时；活动任务标题也可打开详情。
+- 任务详情支持查看完成专注次数、累计时长、放弃次数，编辑名称/计时类型、选择浅色预设和应用内二次确认删除。
+- 专注任务可选浅绿、浅蓝、浅黄、浅粉、浅橙、浅棕、浅紫、薄荷色；旧任务无颜色时固定回退为浅绿。
+- 新专注记录包含 `taskId`；旧记录无 ID 时按任务名称匹配，改名时同步迁移匹配记录。
 - `localStorage` keys：`momofocus.todos`、`momofocus.notes`、`momofocus.tasks`、`momofocus.sessions`、`momofocus.slogan`。
 - localStorage 读取失败或数据结构异常时回退到默认数据；存储写入失败不会阻塞内存中的界面操作。
 
@@ -45,6 +49,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-22：图标路径、项目格式化和打包输出忽略规则已更新；`npm run format:check`、`npm run build`、`git diff --check` 通过。
 - 2026-09-22：`npm run electron:build` 已完成前端构建、Electron 复制和解包阶段，但因下载 `winCodeSign` 时网络连接被重置而未完成安装器签名资源处理。
 - 2026-09-23：首页标语可原位编辑并通过 `momofocus.slogan` 持久化，侧栏专注统计入口改为强调按钮；`npm run build`、`npm run format:check`、`git diff --check` 通过。
+- 2026-09-23：任务卡详情与开始动作分离，增加任务统计、编辑、颜色预设、删除确认及会话任务 ID 兼容；`npm run build`、`npm run format:check`、`git diff --check` 通过，浏览器交互确认详情打开不会启动计时、明确开始可启动计时。
 
 ## 打包与资源约定
 

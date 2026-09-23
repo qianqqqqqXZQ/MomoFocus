@@ -10,6 +10,8 @@ import {
   Clock3,
   Coffee,
   FileText,
+  Palette,
+  Pencil,
   Leaf,
   Menu,
   Pause,
@@ -39,6 +41,7 @@ type FocusTask = {
   focusSeconds: number;
   done: boolean;
   type: TaskType;
+  color?: string;
 };
 type TodoThought = { id: number; text: string; createdAt: string };
 type Todo = {
@@ -58,6 +61,7 @@ type MemoNote = {
 type FocusSession = {
   id: number;
   taskName: string;
+  taskId?: number;
   seconds: number;
   rounds: number;
   date?: string;
@@ -116,6 +120,19 @@ const STORAGE_KEYS = {
   slogan: "momofocus.slogan",
 } as const;
 const DEFAULT_SLOGAN = "慢一点，\n也很好。";
+const TASK_COLORS = [
+  { id: "sage", label: "浅绿", background: "#edf6f0", border: "#d8e9de" },
+  { id: "sky", label: "浅蓝", background: "#edf5f9", border: "#d9e8f0" },
+  { id: "lemon", label: "浅黄", background: "#fbf5df", border: "#f0e3b8" },
+  { id: "rose", label: "浅粉", background: "#fdf0ee", border: "#f1d9d5" },
+  { id: "orange", label: "浅橙", background: "#fff0e3", border: "#f2ddc6" },
+  { id: "brown", label: "浅棕", background: "#f2e9df", border: "#e4d5c4" },
+  { id: "lavender", label: "浅紫", background: "#f2eff8", border: "#e1dbee" },
+  { id: "mint", label: "薄荷", background: "#e8f5f2", border: "#d2e8e2" },
+];
+const DEFAULT_TASK_COLOR = TASK_COLORS[0].id;
+const getTaskColor = (color?: string) =>
+  TASK_COLORS.find((item) => item.id === color) ?? TASK_COLORS[0];
 const readStorage = <T,>(
   key: string,
   fallback: T,
@@ -264,6 +281,12 @@ function App() {
     readStorage(STORAGE_KEYS.todos, initialTodos, isTodoArray),
   );
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [taskDetailsId, setTaskDetailsId] = useState<number | null>(null);
+  const [taskEditText, setTaskEditText] = useState("");
+  const [taskEditType, setTaskEditType] = useState<TaskType>("pomodoro");
+  const [isEditingTask, setIsEditingTask] = useState(false);
+  const [isChoosingTaskColor, setIsChoosingTaskColor] = useState(false);
+  const [confirmingTaskDelete, setConfirmingTaskDelete] = useState(false);
   const [taskInput, setTaskInput] = useState("");
   const [taskTypeInput, setTaskTypeInput] = useState<TaskType>("pomodoro");
   const [todoInput, setTodoInput] = useState("");
@@ -309,9 +332,10 @@ function App() {
   const timerRef = useRef<number | null>(null);
   const startedAtRef = useRef<number | null>(null);
   const startValueRef = useRef(0);
-  const autoStartTaskIdRef = useRef<number | null>(null);
+  const pendingStartTaskIdRef = useRef<number | null>(null);
   const restoringRef = useRef(true);
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const taskInDetails = tasks.find((task) => task.id === taskDetailsId) ?? null;
   const isCountup = selectedTask?.type === "countup";
   const totalSeconds = MODES[mode].minutes * 60;
   const displayedSeconds = isCountup ? elapsed : remaining;
@@ -438,6 +462,7 @@ function App() {
         setSessions((items) => [
           {
             id: nextId(),
+            taskId: selectedTask.id,
             taskName: selectedTask.text,
             seconds,
             rounds: completedRound ? 1 : 0,
@@ -556,10 +581,10 @@ function App() {
     if (
       !selectedTask ||
       restoringRef.current ||
-      autoStartTaskIdRef.current !== selectedTask.id
+      pendingStartTaskIdRef.current !== selectedTask.id
     )
       return;
-    autoStartTaskIdRef.current = null;
+    pendingStartTaskIdRef.current = null;
     startTimer();
   }, [selectedTask, startTimer]);
   useEffect(() => () => stopTimer(), [stopTimer]);
@@ -602,11 +627,27 @@ function App() {
     startedAtRef.current = null;
     setCompletionMessage("已跳过当前阶段");
   };
+  const openTaskDetails = (task: FocusTask) => {
+    setTaskDetailsId(task.id);
+    setTaskEditText(task.text);
+    setTaskEditType(task.type);
+    setIsEditingTask(false);
+    setIsChoosingTaskColor(false);
+    setConfirmingTaskDelete(false);
+  };
   const selectTask = (task: FocusTask) => {
+    openTaskDetails(task);
+  };
+  const startTask = (task: FocusTask) => {
+    setTaskDetailsId(null);
+    if (selectedTask?.id === task.id) {
+      if (!isRunning) startTimer();
+      return;
+    }
     if (isRunning) recordFocus(false, "abandoned");
     stopTimer();
     setIsRunning(false);
-    autoStartTaskIdRef.current = task.id;
+    pendingStartTaskIdRef.current = task.id;
     setSelectedTaskId(task.id);
     setRemaining(MODES[mode].minutes * 60);
     setElapsed(0);
@@ -616,11 +657,69 @@ function App() {
     if (isRunning) recordFocus(false, "abandoned");
     stopTimer();
     setIsRunning(false);
-    autoStartTaskIdRef.current = null;
+    pendingStartTaskIdRef.current = null;
     setSelectedTaskId(null);
     setRemaining(MODES[mode].minutes * 60);
     setElapsed(0);
     startedAtRef.current = null;
+  };
+  const saveTaskEdit = () => {
+    const text = taskEditText.trim();
+    if (!taskInDetails || !text) return;
+    const previousName = taskInDetails.text;
+    if (
+      selectedTaskId === taskInDetails.id &&
+      taskEditType !== taskInDetails.type
+    ) {
+      if (isRunning) recordFocus(false, "abandoned");
+      stopTimer();
+      setIsRunning(false);
+      startedAtRef.current = null;
+      setMode("focus");
+      setRemaining(MODES.focus.minutes * 60);
+      setElapsed(0);
+    }
+    setTasks((items) =>
+      items.map((task) =>
+        task.id === taskInDetails.id
+          ? { ...task, text, type: taskEditType }
+          : task,
+      ),
+    );
+    setSessions((items) =>
+      items.map((session) =>
+        session.taskId === taskInDetails.id ||
+        (!session.taskId && session.taskName === previousName)
+          ? { ...session, taskId: taskInDetails.id, taskName: text }
+          : session,
+      ),
+    );
+    setIsEditingTask(false);
+  };
+  const setTaskColor = (color: string) => {
+    if (!taskInDetails) return;
+    setTasks((items) =>
+      items.map((task) =>
+        task.id === taskInDetails.id ? { ...task, color } : task,
+      ),
+    );
+    setIsChoosingTaskColor(false);
+  };
+  const deleteTask = () => {
+    if (!taskInDetails) return;
+    if (selectedTaskId === taskInDetails.id) {
+      if (isRunning) recordFocus(false, "abandoned");
+      stopTimer();
+      setIsRunning(false);
+      setSelectedTaskId(null);
+      setRemaining(MODES[mode].minutes * 60);
+      setElapsed(0);
+      startedAtRef.current = null;
+      pendingStartTaskIdRef.current = null;
+    }
+    setTasks((items) => items.filter((task) => task.id !== taskInDetails.id));
+    setTaskDetailsId(null);
+    setConfirmingTaskDelete(false);
   };
   const addTask = () => {
     const text = taskInput.trim();
@@ -634,6 +733,7 @@ function App() {
         focusSeconds: 0,
         done: false,
         type: taskTypeInput,
+        color: DEFAULT_TASK_COLOR,
       },
     ]);
     setTaskInput("");
@@ -654,6 +754,11 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
+      if (event.key === "Escape" && taskDetailsId !== null) {
+        setTaskDetailsId(null);
+        return;
+      }
+      if (taskDetailsId !== null) return;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
       if (event.key === " ") {
         event.preventDefault();
@@ -691,23 +796,42 @@ function App() {
             <em>下一件事了吗？</em>
           </h2>
           <div className="central-task-list">
-            {tasks.map((task, index) => (
-              <button
-                className={`central-task-row task-color-${index % 4}`}
-                key={task.id}
-                onClick={() => selectTask(task)}
-              >
-                <span className="central-task-mark" />
-                <span>
-                  <b>{task.text}</b>
-                  <small>
-                    {task.type === "countup" ? "正计时" : "番茄钟"} ·{" "}
-                    {formatDuration(task.focusSeconds)}
-                  </small>
-                </span>
-                <ChevronDown size={15} />
-              </button>
-            ))}
+            {tasks.map((task) => {
+              const color = getTaskColor(task.color);
+              return (
+                <div
+                  className="central-task-row"
+                  key={task.id}
+                  style={{
+                    backgroundColor: color.background,
+                    borderColor: color.border,
+                  }}
+                >
+                  <button
+                    className="central-task-info"
+                    onClick={() => selectTask(task)}
+                    aria-label={`查看任务 ${task.text} 的详情`}
+                  >
+                    <span className="central-task-mark" />
+                    <span>
+                      <b>{task.text}</b>
+                      <small>
+                        {task.type === "countup" ? "正计时" : "番茄钟"} ·{" "}
+                        {formatDuration(task.focusSeconds)}
+                      </small>
+                    </span>
+                    <ChevronDown size={15} />
+                  </button>
+                  <button
+                    className="central-task-start"
+                    onClick={() => startTask(task)}
+                    aria-label={`开始任务 ${task.text}`}
+                  >
+                    开始
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </>
       )}
@@ -875,6 +999,7 @@ function App() {
             totalRounds,
             doneCount,
             renderTaskEntry,
+            openTaskDetails,
             isCountup,
             mode,
             changeMode,
@@ -906,7 +1031,226 @@ function App() {
           setCustomEnd={setCustomEnd}
         />
       )}
+      {taskInDetails && (
+        <TaskDetailsDialog
+          task={taskInDetails}
+          sessions={sessions.filter(
+            (session) =>
+              session.taskId === taskInDetails.id ||
+              (!session.taskId && session.taskName === taskInDetails.text),
+          )}
+          editText={taskEditText}
+          setEditText={setTaskEditText}
+          editType={taskEditType}
+          setEditType={setTaskEditType}
+          isEditing={isEditingTask}
+          setIsEditing={setIsEditingTask}
+          choosingColor={isChoosingTaskColor}
+          setChoosingColor={setIsChoosingTaskColor}
+          confirmingDelete={confirmingTaskDelete}
+          setConfirmingDelete={setConfirmingTaskDelete}
+          onClose={() => setTaskDetailsId(null)}
+          onSave={saveTaskEdit}
+          onSetColor={setTaskColor}
+          onDelete={deleteTask}
+          onStart={() => startTask(taskInDetails)}
+        />
+      )}
     </main>
+  );
+}
+
+function TaskDetailsDialog({
+  task,
+  sessions,
+  editText,
+  setEditText,
+  editType,
+  setEditType,
+  isEditing,
+  setIsEditing,
+  choosingColor,
+  setChoosingColor,
+  confirmingDelete,
+  setConfirmingDelete,
+  onClose,
+  onSave,
+  onSetColor,
+  onDelete,
+  onStart,
+}: {
+  task: FocusTask;
+  sessions: FocusSession[];
+  editText: string;
+  setEditText: Dispatch<SetStateAction<string>>;
+  editType: TaskType;
+  setEditType: Dispatch<SetStateAction<TaskType>>;
+  isEditing: boolean;
+  setIsEditing: Dispatch<SetStateAction<boolean>>;
+  choosingColor: boolean;
+  setChoosingColor: Dispatch<SetStateAction<boolean>>;
+  confirmingDelete: boolean;
+  setConfirmingDelete: Dispatch<SetStateAction<boolean>>;
+  onClose: () => void;
+  onSave: () => void;
+  onSetColor: (color: string) => void;
+  onDelete: () => void;
+  onStart: () => void;
+}) {
+  const completedCount = sessions.filter(
+    (session) => (session.status ?? "completed") === "completed",
+  ).length;
+  const abandonedCount = sessions.filter(
+    (session) => session.status === "abandoned",
+  ).length;
+  const color = getTaskColor(task.color);
+  return (
+    <div className="task-dialog-backdrop" onMouseDown={onClose}>
+      <section
+        className="task-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={task.text}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header
+          className="task-dialog-header"
+          style={{ background: color.background }}
+        >
+          <div className="task-dialog-title-wrap">
+            <span className="central-task-mark" />
+            <div>
+              <span className="section-kicker">专注任务</span>
+              {isEditing ? (
+                <input
+                  autoFocus
+                  value={editText}
+                  onChange={(event) => setEditText(event.target.value)}
+                  aria-label="任务名称"
+                />
+              ) : (
+                <h2>{task.text}</h2>
+              )}
+            </div>
+          </div>
+          <button
+            className="icon-button"
+            aria-label="关闭任务详情"
+            onClick={onClose}
+          >
+            <X size={17} />
+          </button>
+        </header>
+        {isEditing && (
+          <label className="task-type-field">
+            计时方式
+            <select
+              value={editType}
+              onChange={(event) => setEditType(event.target.value as TaskType)}
+            >
+              <option value="pomodoro">番茄钟 · 倒计时</option>
+              <option value="countup">正计时</option>
+            </select>
+          </label>
+        )}
+        <div className="task-detail-metrics">
+          <div>
+            <strong>{completedCount}</strong>
+            <span>专注次数</span>
+          </div>
+          <div>
+            <strong>{formatDuration(task.focusSeconds)}</strong>
+            <span>累计时长</span>
+          </div>
+          <div>
+            <strong>{abandonedCount}</strong>
+            <span>放弃次数</span>
+          </div>
+        </div>
+        {choosingColor && (
+          <div className="task-color-picker" aria-label="选择任务颜色">
+            {TASK_COLORS.map((option) => (
+              <button
+                key={option.id}
+                className={
+                  getTaskColor(task.color).id === option.id ? "selected" : ""
+                }
+                style={{
+                  background: option.background,
+                  borderColor: option.border,
+                }}
+                aria-label={option.label}
+                aria-pressed={getTaskColor(task.color).id === option.id}
+                onClick={() => onSetColor(option.id)}
+              />
+            ))}
+          </div>
+        )}
+        {confirmingDelete ? (
+          <div className="task-delete-confirm">
+            <span>确定删除“{task.text}”？此操作无法撤销。</span>
+            <button onClick={() => setConfirmingDelete(false)}>取消</button>
+            <button className="task-delete-button" onClick={onDelete}>
+              确认删除
+            </button>
+          </div>
+        ) : (
+          <footer className="task-dialog-actions">
+            {isEditing ? (
+              <>
+                <button
+                  className="primary-button"
+                  disabled={!editText.trim()}
+                  onClick={onSave}
+                >
+                  保存
+                </button>
+                <button
+                  className="text-button"
+                  onClick={() => setIsEditing(false)}
+                >
+                  取消
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="task-dialog-start" onClick={onStart}>
+                  <Play size={14} fill="currentColor" />
+                  开始专注
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="更换任务颜色"
+                  title="更换任务颜色"
+                  onClick={() => setChoosingColor((value) => !value)}
+                >
+                  <Palette size={17} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="编辑任务"
+                  title="编辑任务"
+                  onClick={() => {
+                    setEditText(task.text);
+                    setEditType(task.type);
+                    setIsEditing(true);
+                  }}
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  className="task-delete-button"
+                  onClick={() => setConfirmingDelete(true)}
+                >
+                  <Trash2 size={15} />
+                  删除
+                </button>
+              </>
+            )}
+          </footer>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -930,6 +1274,7 @@ type TimerViewProps = {
   totalRounds: number;
   doneCount: number;
   renderTaskEntry: () => JSX.Element;
+  openTaskDetails: (task: FocusTask) => void;
   isCountup: boolean;
   mode: Mode;
   changeMode: (next: Mode) => void;
@@ -971,6 +1316,7 @@ function TimerView(props: TimerViewProps) {
     totalRounds,
     doneCount,
     renderTaskEntry,
+    openTaskDetails,
     isCountup,
     mode,
     changeMode,
@@ -1103,7 +1449,12 @@ function TimerView(props: TimerViewProps) {
                   <span>
                     {isCountup ? <Timer size={15} /> : <Clock3 size={15} />}
                     {isCountup ? "正计时时钟" : "专注时钟"}
-                    <b className="active-task-label">· {selectedTask.text}</b>
+                    <button
+                      className="active-task-label"
+                      onClick={() => openTaskDetails(selectedTask)}
+                    >
+                      · {selectedTask.text}
+                    </button>
                   </span>
                   <span className="live-label">
                     <i />
