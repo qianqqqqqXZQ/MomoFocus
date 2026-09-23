@@ -113,7 +113,9 @@ const STORAGE_KEYS = {
   sessions: "momofocus.sessions",
   timer: "momofocus.timer",
   settings: "momofocus.settings",
+  slogan: "momofocus.slogan",
 } as const;
+const DEFAULT_SLOGAN = "慢一点，\n也很好。";
 const readStorage = <T,>(
   key: string,
   fallback: T,
@@ -248,6 +250,13 @@ function TomatoIcon() {
 
 function App() {
   const [view, setView] = useState<View>("timer");
+  const [slogan, setSlogan] = useState(() =>
+    readStorage(
+      STORAGE_KEYS.slogan,
+      DEFAULT_SLOGAN,
+      (value): value is string => typeof value === "string",
+    ),
+  );
   const [tasks, setTasks] = useState<FocusTask[]>(() =>
     readStorage(STORAGE_KEYS.tasks, [], isArray<FocusTask>),
   );
@@ -338,6 +347,9 @@ function App() {
   useEffect(() => {
     writeStorage(STORAGE_KEYS.settings, { soundOn, notificationsOn });
   }, [soundOn, notificationsOn]);
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.slogan, slogan);
+  }, [slogan]);
   useEffect(() => {
     if (restoringRef.current) return;
     writeStorage(STORAGE_KEYS.timer, {
@@ -879,6 +891,8 @@ function App() {
             exitTask,
             sessions,
             setView,
+            slogan,
+            setSlogan,
           }}
         />
       ) : (
@@ -932,6 +946,8 @@ type TimerViewProps = {
   exitTask: () => void;
   sessions: FocusSession[];
   setView: (view: View) => void;
+  slogan: string;
+  setSlogan: Dispatch<SetStateAction<string>>;
 };
 
 function TimerView(props: TimerViewProps) {
@@ -971,7 +987,21 @@ function TimerView(props: TimerViewProps) {
     exitTask,
     sessions,
     setView,
+    slogan,
+    setSlogan,
   } = props;
+  const [isEditingSlogan, setIsEditingSlogan] = useState(false);
+  const [sloganDraft, setSloganDraft] = useState(slogan);
+  const startSloganEdit = () => {
+    setSloganDraft(slogan);
+    setIsEditingSlogan(true);
+  };
+  const saveSlogan = () => {
+    const trimmedSlogan = sloganDraft.trim();
+    if (!trimmedSlogan) return;
+    setSlogan(trimmedSlogan);
+    setIsEditingSlogan(false);
+  };
   const activeMode = mode as Mode;
   return (
     <>
@@ -979,11 +1009,53 @@ function TimerView(props: TimerViewProps) {
         <aside className="side-rail">
           <div className="welcome-copy">
             <span className="eyebrow">{dateLabel()}</span>
-            <h1>
-              慢一点，
-              <br />
-              <em>也很好。</em>
-            </h1>
+            {isEditingSlogan ? (
+              <div className="slogan-editor">
+                <textarea
+                  aria-label="编辑首页标语"
+                  autoFocus
+                  value={sloganDraft}
+                  onChange={(event) => setSloganDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") setIsEditingSlogan(false);
+                  }}
+                />
+                <div className="slogan-editor-actions">
+                  <button className="slogan-save" onClick={saveSlogan}>
+                    保存
+                  </button>
+                  <button onClick={() => setIsEditingSlogan(false)}>
+                    取消
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSlogan(DEFAULT_SLOGAN);
+                      setSloganDraft(DEFAULT_SLOGAN);
+                      setIsEditingSlogan(false);
+                    }}
+                  >
+                    恢复默认
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <h1>
+                <button
+                  className="slogan-trigger"
+                  aria-label="点击编辑首页标语"
+                  onClick={startSloganEdit}
+                >
+                  {slogan.split("\n").map((line, index) => (
+                    <span
+                      key={`${index}-${line}`}
+                      className={index > 0 ? "slogan-accent" : undefined}
+                    >
+                      {line}
+                    </span>
+                  ))}
+                </button>
+              </h1>
+            )}
             <p>给今天的自己，留一小段专心的时间。</p>
           </div>
           <div className="daily-summary">

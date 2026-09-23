@@ -247,6 +247,60 @@ textarea:focus-visible {
   color: var(--red);
   font-style: normal;
 }
+.slogan-trigger {
+  display: grid;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  white-space: pre-wrap;
+  cursor: pointer;
+}
+.slogan-trigger:hover {
+  color: var(--red-dark);
+}
+.slogan-trigger:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 4px;
+}
+.slogan-accent {
+  color: var(--red);
+}
+.slogan-editor textarea {
+  display: block;
+  width: 100%;
+  min-height: 118px;
+  resize: vertical;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font:
+    400 34px/1.35 "ZCOOL XiaoWei",
+    "Microsoft YaHei",
+    serif;
+}
+.slogan-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+}
+.slogan-editor-actions button {
+  padding: 5px 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+}
+.slogan-editor-actions .slogan-save {
+  background: var(--red);
+  color: white;
+}
 .welcome-copy p {
   color: var(--muted);
   font-size: 13px;
@@ -1046,12 +1100,25 @@ textarea::placeholder {
   padding: 12px 0;
 }
 .stats-nav {
-  margin-top: 26px;
+  margin-top: 24px;
   width: 100%;
-  justify-content: space-between;
-  border-top: 1px dashed #d8d0c1;
+  min-height: 44px;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid #ead0c8;
+  border-radius: 5px;
+  background: #f7e9e3;
+  font-weight: 700;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
 }
-.stats-nav:hover,
+.stats-nav:hover {
+  background: #f0d9d0;
+  border-color: #dfb8ab;
+  color: var(--red-dark);
+}
 .back-button:hover {
   color: var(--red-dark);
 }
