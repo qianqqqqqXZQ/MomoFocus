@@ -17,8 +17,6 @@ import {
   Pause,
   Play,
   Plus,
-  RotateCcw,
-  SkipForward,
   Sparkles,
   Target,
   Timer,
@@ -41,6 +39,8 @@ type FocusTask = {
   focusSeconds: number;
   done: boolean;
   type: TaskType;
+  focusMinutes?: number;
+  breakMinutes?: number;
   color?: string;
 };
 type TodoThought = { id: number; text: string; createdAt: string };
@@ -78,6 +78,7 @@ type TimerSnapshot = {
   remaining: number;
   elapsed: number;
   completedPending: boolean;
+  sessionStartedAt?: number | null;
 };
 type AppSettings = { soundOn: boolean; notificationsOn: boolean };
 
@@ -89,6 +90,10 @@ const MODES: Record<
   short: { label: "短休息", minutes: 5, icon: Coffee },
   long: { label: "长休息", minutes: 15, icon: Leaf },
 };
+const DEFAULT_FOCUS_MINUTES = 25;
+const DEFAULT_BREAK_MINUTES = 5;
+const MIN_TIMER_MINUTES = 1;
+const MAX_TIMER_MINUTES = 180;
 const initialNotes: Note[] = [
   {
     id: 1,
@@ -156,6 +161,24 @@ const writeStorage = (key: string, value: unknown) => {
 };
 const nextId = () => Date.now() * 1000 + Math.floor(Math.random() * 1000);
 const isArray = <T,>(value: unknown): value is T[] => Array.isArray(value);
+const normalizeTask = (task: FocusTask): FocusTask => ({
+  ...task,
+  focusMinutes: task.focusMinutes ?? DEFAULT_FOCUS_MINUTES,
+  breakMinutes: task.breakMinutes ?? DEFAULT_BREAK_MINUTES,
+});
+const isFocusTaskArray = (value: unknown): value is FocusTask[] =>
+  Array.isArray(value) &&
+  value.every(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      typeof (item as FocusTask).id === "number" &&
+      typeof (item as FocusTask).text === "string" &&
+      typeof (item as FocusTask).rounds === "number" &&
+      typeof (item as FocusTask).focusSeconds === "number" &&
+      typeof (item as FocusTask).done === "boolean" &&
+      ["pomodoro", "countup"].includes((item as FocusTask).type),
+  );
 const isTodoThoughtArray = (value: unknown): value is TodoThought[] =>
   Array.isArray(value) &&
   value.every(
@@ -275,7 +298,7 @@ function App() {
     ),
   );
   const [tasks, setTasks] = useState<FocusTask[]>(() =>
-    readStorage(STORAGE_KEYS.tasks, [], isArray<FocusTask>),
+    readStorage(STORAGE_KEYS.tasks, [], isFocusTaskArray).map(normalizeTask),
   );
   const [todos, setTodos] = useState<Todo[]>(() =>
     readStorage(STORAGE_KEYS.todos, initialTodos, isTodoArray),
@@ -284,11 +307,23 @@ function App() {
   const [taskDetailsId, setTaskDetailsId] = useState<number | null>(null);
   const [taskEditText, setTaskEditText] = useState("");
   const [taskEditType, setTaskEditType] = useState<TaskType>("pomodoro");
+  const [taskEditFocusMinutes, setTaskEditFocusMinutes] = useState(
+    DEFAULT_FOCUS_MINUTES,
+  );
+  const [taskEditBreakMinutes, setTaskEditBreakMinutes] = useState(
+    DEFAULT_BREAK_MINUTES,
+  );
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [isChoosingTaskColor, setIsChoosingTaskColor] = useState(false);
   const [confirmingTaskDelete, setConfirmingTaskDelete] = useState(false);
   const [taskInput, setTaskInput] = useState("");
   const [taskTypeInput, setTaskTypeInput] = useState<TaskType>("pomodoro");
+  const [taskFocusMinutesInput, setTaskFocusMinutesInput] = useState(
+    DEFAULT_FOCUS_MINUTES,
+  );
+  const [taskBreakMinutesInput, setTaskBreakMinutesInput] = useState(
+    DEFAULT_BREAK_MINUTES,
+  );
   const [todoInput, setTodoInput] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [mode, setMode] = useState<Mode>("focus");
@@ -326,18 +361,27 @@ function App() {
   const [showSoundTip, setShowSoundTip] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
+  const pendingPomodoroFocusSecondsRef = useRef(0);
   const [filter, setFilter] = useState<Filter>("day");
   const [customStart, setCustomStart] = useState(dateKey());
   const [customEnd, setCustomEnd] = useState(dateKey());
   const timerRef = useRef<number | null>(null);
   const startedAtRef = useRef<number | null>(null);
+  const sessionStartedAtRef = useRef<number | null>(null);
   const startValueRef = useRef(0);
   const pendingStartTaskIdRef = useRef<number | null>(null);
   const restoringRef = useRef(true);
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
   const taskInDetails = tasks.find((task) => task.id === taskDetailsId) ?? null;
   const isCountup = selectedTask?.type === "countup";
-  const totalSeconds = MODES[mode].minutes * 60;
+  const focusMinutes = selectedTask?.focusMinutes ?? DEFAULT_FOCUS_MINUTES;
+  const breakMinutes = selectedTask?.breakMinutes ?? DEFAULT_BREAK_MINUTES;
+  const totalSeconds =
+    (isCountup
+      ? DEFAULT_FOCUS_MINUTES
+      : mode === "focus"
+        ? focusMinutes
+        : breakMinutes) * 60;
   const displayedSeconds = isCountup ? elapsed : remaining;
   const progress = isCountup
     ? Math.min(1, elapsed / totalSeconds)
@@ -385,6 +429,7 @@ function App() {
       remaining,
       elapsed,
       completedPending: !isCountup && remaining === 0,
+      sessionStartedAt: sessionStartedAtRef.current,
     });
   }, [selectedTaskId, mode, isRunning, remaining, elapsed, isCountup]);
 
@@ -420,95 +465,88 @@ function App() {
       /* Audio is optional and must not interrupt timing. */
     }
   }, [soundOn]);
-  const recordFocus = useCallback(
-    (
-      completedRound = false,
-      status: FocusStatus = "abandoned",
-      countdownRemaining?: number,
-    ) => {
-      if (!selectedTask || !startedAtRef.current) return;
-      const startedAt = startedAtRef.current;
-      const liveRemaining =
-        countdownRemaining ??
-        Math.max(
-          0,
-          startValueRef.current - Math.ceil((Date.now() - startedAt) / 1000),
-        );
-      const seconds = isCountup
-        ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000))
-        : Math.max(0, startValueRef.current - liveRemaining);
-      if (seconds <= 0) {
-        startedAtRef.current = null;
-        return;
-      }
-      if (mode === "focus" || isCountup) {
-        setTasks((items) =>
-          items.map((task) =>
-            task.id === selectedTask.id
-              ? {
-                  ...task,
-                  focusSeconds: task.focusSeconds + seconds,
-                  rounds:
-                    task.rounds +
-                    (completedRound &&
-                    task.type === "pomodoro" &&
-                    mode === "focus"
-                      ? 1
-                      : 0),
-                }
-              : task,
-          ),
-        );
-        setSessions((items) => [
-          {
-            id: nextId(),
-            taskId: selectedTask.id,
-            taskName: selectedTask.text,
-            seconds,
-            rounds: completedRound ? 1 : 0,
-            date: dateKey(new Date(startedAt)),
-            status,
-            startedAt: new Date(startedAt).toISOString(),
-          },
-          ...items,
-        ]);
-      }
-      startedAtRef.current = null;
+  const recordSession = useCallback(
+    (seconds: number, status: FocusStatus, completedRound: boolean) => {
+      if (!selectedTask || seconds <= 0) return;
+      const startedAt = sessionStartedAtRef.current ?? Date.now();
+      setTasks((items) =>
+        items.map((task) =>
+          task.id === selectedTask.id
+            ? {
+                ...task,
+                focusSeconds: task.focusSeconds + seconds,
+                rounds: task.rounds + (completedRound ? 1 : 0),
+              }
+            : task,
+        ),
+      );
+      setSessions((items) => [
+        {
+          id: nextId(),
+          taskId: selectedTask.id,
+          taskName: selectedTask.text,
+          seconds,
+          rounds: completedRound ? 1 : 0,
+          date: dateKey(new Date(startedAt)),
+          status,
+          startedAt: new Date(startedAt).toISOString(),
+        },
+        ...items,
+      ]);
+      sessionStartedAtRef.current = null;
     },
-    [isCountup, mode, selectedTask],
+    [selectedTask],
   );
+  const getCurrentPhaseSeconds = useCallback(() => {
+    if (isCountup) {
+      return startedAtRef.current
+        ? startValueRef.current +
+            Math.floor((Date.now() - startedAtRef.current) / 1000)
+        : elapsed;
+    }
+    const liveRemaining = startedAtRef.current
+      ? Math.max(
+          0,
+          Math.ceil(
+            (startedAtRef.current + startValueRef.current * 1000 - Date.now()) /
+              1000,
+          ),
+        )
+      : remaining;
+    return Math.max(0, startValueRef.current - liveRemaining);
+  }, [elapsed, isCountup, remaining]);
   const finishPhase = useCallback(() => {
     if (!selectedTask) return;
-    recordFocus(true, "completed", 0);
     playCompletionSound();
-    const nextMode: Mode = isCountup
-      ? "focus"
-      : mode === "focus"
-        ? selectedTask.rounds % 4 === 3
-          ? "long"
-          : "short"
-        : "focus";
-    const nextLabel =
-      nextMode === "focus"
-        ? "专注完成，可以开始下一轮了"
-        : "专注完成，休息一下吧";
-    setMode(nextMode);
-    setRemaining(MODES[nextMode].minutes * 60);
-    setElapsed(0);
+    if (isCountup) return;
+    if (mode === "focus") {
+      pendingPomodoroFocusSecondsRef.current = getCurrentPhaseSeconds();
+      setMode("short");
+      setRemaining(breakMinutes * 60);
+      setElapsed(0);
+      setCompletionMessage("专注完成，休息已开始");
+      notifyUser("专注完成，休息已开始", "请休息一下，休息结束后本轮将完成。");
+      startedAtRef.current = Date.now();
+      startValueRef.current = breakMinutes * 60;
+      setIsRunning(true);
+      timerRef.current = window.setInterval(updateTimer, 250);
+      return;
+    }
+    recordSession(pendingPomodoroFocusSecondsRef.current, "completed", true);
+    pendingPomodoroFocusSecondsRef.current = 0;
     setIsRunning(false);
-    setCompletionMessage(nextLabel);
-    notifyUser(
-      nextLabel,
-      nextMode === "focus"
-        ? "休息结束后，准备开始新的专注。"
-        : `已切换到${MODES[nextMode].label}。`,
-    );
+    startedAtRef.current = null;
+    setRemaining(0);
+    setCompletionMessage("番茄钟完成");
+    notifyUser("番茄钟完成", "专注和休息都已完成。");
   }, [
+    breakMinutes,
+    getCurrentPhaseSeconds,
     isCountup,
     mode,
     notifyUser,
     playCompletionSound,
-    recordFocus,
+    recordSession,
     selectedTask,
   ]);
   const updateTimer = useCallback(() => {
@@ -538,6 +576,7 @@ function App() {
     if (!selectedTask || startedAtRef.current || (!isCountup && remaining <= 0))
       return;
     startedAtRef.current = Date.now();
+    if (!sessionStartedAtRef.current) sessionStartedAtRef.current = Date.now();
     startValueRef.current = isCountup ? elapsed : remaining;
     setCompletionMessage("");
     setIsRunning(true);
@@ -558,11 +597,20 @@ function App() {
       tasks.some((task) => task.id === snapshot.taskId)
     ) {
       setSelectedTaskId(snapshot.taskId);
-      setMode(snapshot.mode);
+      const restoredTask = tasks.find((task) => task.id === snapshot.taskId);
+      setMode(
+        restoredTask?.type === "countup"
+          ? "focus"
+          : snapshot.mode === "short"
+            ? "short"
+            : "focus",
+      );
       setRemaining(snapshot.remaining);
       setElapsed(snapshot.elapsed);
       startValueRef.current = snapshot.startValue;
       startedAtRef.current = snapshot.startedAt;
+      sessionStartedAtRef.current =
+        snapshot.sessionStartedAt ?? snapshot.startedAt;
       if (snapshot.isRunning && snapshot.startedAt) {
         setIsRunning(true);
         if (snapshot.mode !== "focus" || snapshot.remaining > 0)
@@ -591,46 +639,39 @@ function App() {
   const toggleTimer = () => {
     if (isRunning) {
       updateTimer();
-      recordFocus(false, "abandoned");
       setIsRunning(false);
       stopTimer();
+      startedAtRef.current = null;
+      setCompletionMessage("已暂停");
       return;
     }
     startTimer();
   };
-  const resetTimer = () => {
-    if (isRunning) recordFocus(false, "abandoned");
+  const abandonTask = () => {
+    if (!selectedTask) return;
+    updateTimer();
+    const seconds =
+      mode === "short"
+        ? pendingPomodoroFocusSecondsRef.current
+        : getCurrentPhaseSeconds();
+    const shouldRecord = seconds >= 5;
+    if (shouldRecord) recordSession(seconds, "abandoned", false);
+    else alert("专注时长不足 5 秒，不计入历史记录");
     stopTimer();
     setIsRunning(false);
-    setRemaining(totalSeconds);
-    setElapsed(0);
     startedAtRef.current = null;
-    setCompletionMessage("当前阶段已重置");
-  };
-  const changeMode = (next: Mode) => {
-    if (isRunning) recordFocus(false, "abandoned");
-    stopTimer();
-    setIsRunning(false);
-    setMode(next);
-    setRemaining(MODES[next].minutes * 60);
+    sessionStartedAtRef.current = null;
+    pendingPomodoroFocusSecondsRef.current = 0;
+    setSelectedTaskId(null);
     setElapsed(0);
-    startedAtRef.current = null;
     setCompletionMessage("");
-  };
-  const skipPhase = () => {
-    if (isRunning) recordFocus(false, "skipped");
-    stopTimer();
-    setIsRunning(false);
-    setMode(mode === "focus" ? "short" : "focus");
-    setRemaining(MODES[mode === "focus" ? "short" : "focus"].minutes * 60);
-    setElapsed(0);
-    startedAtRef.current = null;
-    setCompletionMessage("已跳过当前阶段");
   };
   const openTaskDetails = (task: FocusTask) => {
     setTaskDetailsId(task.id);
     setTaskEditText(task.text);
     setTaskEditType(task.type);
+    setTaskEditFocusMinutes(task.focusMinutes ?? DEFAULT_FOCUS_MINUTES);
+    setTaskEditBreakMinutes(task.breakMinutes ?? DEFAULT_BREAK_MINUTES);
     setIsEditingTask(false);
     setIsChoosingTaskColor(false);
     setConfirmingTaskDelete(false);
@@ -644,24 +685,21 @@ function App() {
       if (!isRunning) startTimer();
       return;
     }
-    if (isRunning) recordFocus(false, "abandoned");
+    if (isRunning) abandonTask();
     stopTimer();
     setIsRunning(false);
     pendingStartTaskIdRef.current = task.id;
     setSelectedTaskId(task.id);
-    setRemaining(MODES[mode].minutes * 60);
+    setMode(task.type === "countup" ? "focus" : "focus");
+    setRemaining(
+      (task.type === "countup"
+        ? DEFAULT_FOCUS_MINUTES
+        : (task.focusMinutes ?? DEFAULT_FOCUS_MINUTES)) * 60,
+    );
     setElapsed(0);
     startedAtRef.current = null;
-  };
-  const exitTask = () => {
-    if (isRunning) recordFocus(false, "abandoned");
-    stopTimer();
-    setIsRunning(false);
-    pendingStartTaskIdRef.current = null;
-    setSelectedTaskId(null);
-    setRemaining(MODES[mode].minutes * 60);
-    setElapsed(0);
-    startedAtRef.current = null;
+    sessionStartedAtRef.current = null;
+    pendingPomodoroFocusSecondsRef.current = 0;
   };
   const saveTaskEdit = () => {
     const text = taskEditText.trim();
@@ -669,20 +707,34 @@ function App() {
     const previousName = taskInDetails.text;
     if (
       selectedTaskId === taskInDetails.id &&
-      taskEditType !== taskInDetails.type
+      (taskEditType !== taskInDetails.type ||
+        taskEditFocusMinutes !==
+          (taskInDetails.focusMinutes ?? DEFAULT_FOCUS_MINUTES) ||
+        taskEditBreakMinutes !==
+          (taskInDetails.breakMinutes ?? DEFAULT_BREAK_MINUTES))
     ) {
-      if (isRunning) recordFocus(false, "abandoned");
+      if (isRunning) abandonTask();
       stopTimer();
       setIsRunning(false);
       startedAtRef.current = null;
       setMode("focus");
-      setRemaining(MODES.focus.minutes * 60);
+      setRemaining(
+        (taskEditType === "countup"
+          ? DEFAULT_FOCUS_MINUTES
+          : taskEditFocusMinutes) * 60,
+      );
       setElapsed(0);
     }
     setTasks((items) =>
       items.map((task) =>
         task.id === taskInDetails.id
-          ? { ...task, text, type: taskEditType }
+          ? {
+              ...task,
+              text,
+              type: taskEditType,
+              focusMinutes: taskEditFocusMinutes,
+              breakMinutes: taskEditBreakMinutes,
+            }
           : task,
       ),
     );
@@ -708,13 +760,15 @@ function App() {
   const deleteTask = () => {
     if (!taskInDetails) return;
     if (selectedTaskId === taskInDetails.id) {
-      if (isRunning) recordFocus(false, "abandoned");
+      if (isRunning) abandonTask();
       stopTimer();
       setIsRunning(false);
       setSelectedTaskId(null);
-      setRemaining(MODES[mode].minutes * 60);
+      setRemaining(DEFAULT_FOCUS_MINUTES * 60);
       setElapsed(0);
       startedAtRef.current = null;
+      sessionStartedAtRef.current = null;
+      pendingPomodoroFocusSecondsRef.current = 0;
       pendingStartTaskIdRef.current = null;
     }
     setTasks((items) => items.filter((task) => task.id !== taskInDetails.id));
@@ -733,6 +787,8 @@ function App() {
         focusSeconds: 0,
         done: false,
         type: taskTypeInput,
+        focusMinutes: taskFocusMinutesInput,
+        breakMinutes: taskBreakMinutesInput,
         color: DEFAULT_TASK_COLOR,
       },
     ]);
@@ -763,13 +819,11 @@ function App() {
       if (event.key === " ") {
         event.preventDefault();
         if (selectedTask) toggleTimer();
-      } else if (event.key.toLowerCase() === "r" && selectedTask) resetTimer();
-      else if (event.key.toLowerCase() === "s" && selectedTask && !isCountup)
-        skipPhase();
+      } else if (event.key.toLowerCase() === "s" && selectedTask) abandonTask();
       else if (event.key === "Escape") {
         if (mobileMenuOpen) setMobileMenuOpen(false);
         else if (showSoundTip) setShowSoundTip(false);
-        else if (selectedTask) exitTask();
+        else if (selectedTask) abandonTask();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -816,8 +870,10 @@ function App() {
                     <span>
                       <b>{task.text}</b>
                       <small>
-                        {task.type === "countup" ? "正计时" : "番茄钟"} ·{" "}
-                        {formatDuration(task.focusSeconds)}
+                        {task.type === "countup"
+                          ? "正计时"
+                          : `番茄钟 · ${task.focusMinutes ?? DEFAULT_FOCUS_MINUTES}/${task.breakMinutes ?? DEFAULT_BREAK_MINUTES} 分钟`}{" "}
+                        · {formatDuration(task.focusSeconds)}
                       </small>
                     </span>
                     <ChevronDown size={15} />
@@ -855,9 +911,51 @@ function App() {
                   setTaskTypeInput(event.target.value as TaskType)
                 }
               >
-                <option value="pomodoro">番茄钟 · 25 分钟</option>
+                <option value="pomodoro">番茄钟</option>
                 <option value="countup">正计时 · 自由记录</option>
               </select>
+              {taskTypeInput === "pomodoro" && (
+                <div className="task-duration-fields">
+                  <label>
+                    专注
+                    <input
+                      type="number"
+                      min={MIN_TIMER_MINUTES}
+                      max={MAX_TIMER_MINUTES}
+                      value={taskFocusMinutesInput}
+                      onChange={(event) =>
+                        setTaskFocusMinutesInput(
+                          Math.max(
+                            MIN_TIMER_MINUTES,
+                            Number(event.target.value),
+                          ),
+                        )
+                      }
+                      aria-label="专注时长（分钟）"
+                    />
+                    分钟
+                  </label>
+                  <label>
+                    休息
+                    <input
+                      type="number"
+                      min={MIN_TIMER_MINUTES}
+                      max={MAX_TIMER_MINUTES}
+                      value={taskBreakMinutesInput}
+                      onChange={(event) =>
+                        setTaskBreakMinutesInput(
+                          Math.max(
+                            MIN_TIMER_MINUTES,
+                            Number(event.target.value),
+                          ),
+                        )
+                      }
+                      aria-label="休息时长（分钟）"
+                    />
+                    分钟
+                  </label>
+                </div>
+              )}
             </div>
             <div className="new-task-actions">
               <button
@@ -1002,7 +1100,6 @@ function App() {
             openTaskDetails,
             isCountup,
             mode,
-            changeMode,
             displayedSeconds,
             radius,
             circumference,
@@ -1011,9 +1108,7 @@ function App() {
             remaining,
             completionMessage,
             toggleTimer,
-            resetTimer,
-            skipPhase,
-            exitTask,
+            abandonTask,
             sessions,
             setView,
             slogan,
@@ -1043,6 +1138,10 @@ function App() {
           setEditText={setTaskEditText}
           editType={taskEditType}
           setEditType={setTaskEditType}
+          editFocusMinutes={taskEditFocusMinutes}
+          setEditFocusMinutes={setTaskEditFocusMinutes}
+          editBreakMinutes={taskEditBreakMinutes}
+          setEditBreakMinutes={setTaskEditBreakMinutes}
           isEditing={isEditingTask}
           setIsEditing={setIsEditingTask}
           choosingColor={isChoosingTaskColor}
@@ -1067,6 +1166,10 @@ function TaskDetailsDialog({
   setEditText,
   editType,
   setEditType,
+  editFocusMinutes,
+  setEditFocusMinutes,
+  editBreakMinutes,
+  setEditBreakMinutes,
   isEditing,
   setIsEditing,
   choosingColor,
@@ -1085,6 +1188,10 @@ function TaskDetailsDialog({
   setEditText: Dispatch<SetStateAction<string>>;
   editType: TaskType;
   setEditType: Dispatch<SetStateAction<TaskType>>;
+  editFocusMinutes: number;
+  setEditFocusMinutes: Dispatch<SetStateAction<number>>;
+  editBreakMinutes: number;
+  setEditBreakMinutes: Dispatch<SetStateAction<number>>;
   isEditing: boolean;
   setIsEditing: Dispatch<SetStateAction<boolean>>;
   choosingColor: boolean;
@@ -1142,16 +1249,52 @@ function TaskDetailsDialog({
           </button>
         </header>
         {isEditing && (
-          <label className="task-type-field">
-            计时方式
-            <select
-              value={editType}
-              onChange={(event) => setEditType(event.target.value as TaskType)}
-            >
-              <option value="pomodoro">番茄钟 · 倒计时</option>
-              <option value="countup">正计时</option>
-            </select>
-          </label>
+          <div className="task-edit-fields">
+            <label className="task-type-field">
+              计时方式
+              <select
+                value={editType}
+                onChange={(event) =>
+                  setEditType(event.target.value as TaskType)
+                }
+              >
+                <option value="pomodoro">番茄钟 · 倒计时</option>
+                <option value="countup">正计时</option>
+              </select>
+            </label>
+            {editType === "pomodoro" && (
+              <>
+                <label className="task-type-field">
+                  专注时长（分钟）
+                  <input
+                    type="number"
+                    min={MIN_TIMER_MINUTES}
+                    max={MAX_TIMER_MINUTES}
+                    value={editFocusMinutes}
+                    onChange={(event) =>
+                      setEditFocusMinutes(
+                        Math.max(MIN_TIMER_MINUTES, Number(event.target.value)),
+                      )
+                    }
+                  />
+                </label>
+                <label className="task-type-field">
+                  休息时长（分钟）
+                  <input
+                    type="number"
+                    min={MIN_TIMER_MINUTES}
+                    max={MAX_TIMER_MINUTES}
+                    value={editBreakMinutes}
+                    onChange={(event) =>
+                      setEditBreakMinutes(
+                        Math.max(MIN_TIMER_MINUTES, Number(event.target.value)),
+                      )
+                    }
+                  />
+                </label>
+              </>
+            )}
+          </div>
         )}
         <div className="task-detail-metrics">
           <div>
@@ -1233,6 +1376,12 @@ function TaskDetailsDialog({
                   onClick={() => {
                     setEditText(task.text);
                     setEditType(task.type);
+                    setEditFocusMinutes(
+                      task.focusMinutes ?? DEFAULT_FOCUS_MINUTES,
+                    );
+                    setEditBreakMinutes(
+                      task.breakMinutes ?? DEFAULT_BREAK_MINUTES,
+                    );
                     setIsEditing(true);
                   }}
                 >
@@ -1277,7 +1426,6 @@ type TimerViewProps = {
   openTaskDetails: (task: FocusTask) => void;
   isCountup: boolean;
   mode: Mode;
-  changeMode: (next: Mode) => void;
   displayedSeconds: number;
   radius: number;
   circumference: number;
@@ -1286,9 +1434,7 @@ type TimerViewProps = {
   remaining: number;
   completionMessage: string;
   toggleTimer: () => void;
-  resetTimer: () => void;
-  skipPhase: () => void;
-  exitTask: () => void;
+  abandonTask: () => void;
   sessions: FocusSession[];
   setView: (view: View) => void;
   slogan: string;
@@ -1319,7 +1465,6 @@ function TimerView(props: TimerViewProps) {
     openTaskDetails,
     isCountup,
     mode,
-    changeMode,
     displayedSeconds,
     radius,
     circumference,
@@ -1328,9 +1473,7 @@ function TimerView(props: TimerViewProps) {
     remaining,
     completionMessage,
     toggleTimer,
-    resetTimer,
-    skipPhase,
-    exitTask,
+    abandonTask,
     sessions,
     setView,
     slogan,
@@ -1348,7 +1491,6 @@ function TimerView(props: TimerViewProps) {
     setSlogan(trimmedSlogan);
     setIsEditingSlogan(false);
   };
-  const activeMode = mode as Mode;
   return (
     <>
       <section className="workspace">
@@ -1464,29 +1606,7 @@ function TimerView(props: TimerViewProps) {
                         ? "本轮完成"
                         : "准备开始"}
                   </span>
-                  <button
-                    className="exit-task-button"
-                    aria-label="退出当前任务"
-                    onClick={exitTask}
-                  >
-                    <ArrowLeft size={14} />
-                    退出任务
-                  </button>
                 </div>
-                {!isCountup && (
-                  <div className="mode-tabs">
-                    {(Object.keys(MODES) as Mode[]).map((key) => (
-                      <button
-                        key={key}
-                        className={activeMode === key ? "active" : ""}
-                        onClick={() => changeMode(key)}
-                      >
-                        {MODES[key].label}
-                        <span>{MODES[key].minutes} min</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
                 <div className={`timer-wrap ${isRunning ? "is-running" : ""}`}>
                   <svg className="timer-ring" viewBox="0 0 300 300">
                     <circle
@@ -1508,8 +1628,13 @@ function TimerView(props: TimerViewProps) {
                   </svg>
                   <div className="timer-content">
                     <span>
-                      {isCountup ? "已专注" : MODES[activeMode].label}
+                      {isCountup
+                        ? "正计时"
+                        : mode === "focus"
+                          ? "专注中"
+                          : "休息中"}
                     </span>
+                    <b className="timer-task-name">{selectedTask.text}</b>
                     <strong>{formatTime(displayedSeconds)}</strong>
                     <small>
                       {completionMessage ||
@@ -1522,34 +1647,23 @@ function TimerView(props: TimerViewProps) {
                     className="primary-button"
                     aria-label={isRunning ? "暂停计时" : "开始计时"}
                     onClick={toggleTimer}
+                    disabled={!isCountup && remaining === 0}
                   >
                     {isRunning ? (
                       <Pause size={17} />
                     ) : (
                       <Play size={17} fill="currentColor" />
                     )}
-                    {isRunning
-                      ? "暂停"
-                      : remaining === 0
-                        ? "开始下一阶段"
-                        : activeMode === "focus"
-                          ? "开始专注"
-                          : `开始${MODES[activeMode].label}`}
+                    {isRunning ? "暂停" : remaining === 0 ? "已完成" : "继续"}
                   </button>
                   <button
-                    className="secondary-button"
-                    aria-label="重置当前阶段"
-                    onClick={resetTimer}
+                    className="secondary-button abandon-button"
+                    aria-label="放弃当前任务"
+                    onClick={abandonTask}
                   >
-                    <RotateCcw size={16} />
-                    重置
+                    <X size={16} />
+                    放弃
                   </button>
-                  {!isCountup && (
-                    <button className="secondary-button" onClick={skipPhase}>
-                      <SkipForward size={16} />
-                      跳过
-                    </button>
-                  )}
                 </div>
                 <FocusHistory sessions={sessions} />
               </>

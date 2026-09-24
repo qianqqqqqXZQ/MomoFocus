@@ -466,6 +466,17 @@ textarea:focus-visible {
   color: var(--muted);
   font-size: 12px;
 }
+.timer-task-name {
+  display: block;
+  max-width: 220px;
+  margin: 6px auto 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .timer-content strong {
   display: block;
   color: var(--ink);
@@ -518,6 +529,16 @@ textarea:focus-visible {
 .secondary-button:hover {
   color: var(--ink);
   background: #e1dbcf;
+}
+.abandon-button {
+  border: 1px solid rgba(190, 55, 49, 0.18);
+  background: rgba(190, 55, 49, 0.06);
+  color: #b73531;
+}
+.abandon-button:hover {
+  border-color: rgba(190, 55, 49, 0.35);
+  background: rgba(190, 55, 49, 0.12);
+  color: #9f2d29;
 }
 .timer-hint {
   text-align: center;
@@ -1707,13 +1728,22 @@ textarea::placeholder {
   color: var(--muted);
   font-size: 11px;
 }
-.task-type-field select {
+.task-type-field select,
+.task-type-field input {
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 4px;
   background: white;
   padding: 0 9px;
   color: var(--ink);
+}
+.task-edit-fields {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.task-edit-fields .task-type-field {
+  padding-top: 14px;
 }
 .task-detail-metrics {
   display: grid;
@@ -1873,6 +1903,22 @@ textarea::placeholder {
 .new-task-fields input:focus,
 .new-task-fields select:focus {
   border-color: var(--red);
+}
+.task-duration-fields {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.task-duration-fields label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.task-duration-fields input {
+  min-height: 38px;
+  padding: 0 8px;
 }
 .new-task-actions {
   display: flex;

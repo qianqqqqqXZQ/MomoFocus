@@ -18,6 +18,8 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 备忘录支持标题、纯文本正文、多篇列表、自动保存和直接删除。
 - 中间专注任务卡点击打开详情，右侧“开始”才启动计时；活动任务标题也可打开详情。
 - 任务详情支持查看完成专注次数、累计时长、放弃次数，编辑名称/计时类型、选择浅色预设和应用内二次确认删除。
+- 番茄钟任务保存 `focusMinutes` 和 `breakMinutes`；旧任务读取时默认补齐为 25/5。运行中的番茄钟固定按专注 -> 休息 -> 完成流转，休息结束才增加完成番茄数。
+- 运行界面仅保留暂停/继续与放弃；暂停不写历史，放弃时专注累计不足 5 秒不写入历史并弹窗提示，休息阶段放弃记录为 `abandoned` 但不计完成。
 - 专注任务可选浅绿、浅蓝、浅黄、浅粉、浅橙、浅棕、浅紫、薄荷色；旧任务无颜色时固定回退为浅绿。
 - 新专注记录包含 `taskId`；旧记录无 ID 时按任务名称匹配，改名时同步迁移匹配记录。
 - `localStorage` keys：`momofocus.todos`、`momofocus.notes`、`momofocus.tasks`、`momofocus.sessions`、`momofocus.slogan`。
@@ -38,7 +40,9 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 计时快照使用 `momofocus.timer`，按 `Date.now()` 真实时间恢复倒计时和正计时。
 - 快速记录使用 `momofocus.quickNotes`；声音和系统通知设置使用 `momofocus.settings`。
 - Electron 原生通知通过 `electron/preload.cjs` 暴露的受限 `momoFocusNative.notify` API 调用，主窗口保持隔离上下文。
-- 阶段完成后自动切换到下一阶段但不自动开始；快捷键为 `Space`、`R`、`S` 和 `Escape`。
+- 正计时启动后持续计时；番茄钟专注结束自动进入休息并开始计时，休息结束停止并完成本轮。快捷键为 `Space`（暂停/继续）、`S` 或 `Escape`（放弃）。
+- 番茄钟专注结束自动播放提示音并开始任务自定义休息；休息结束再次播放提示音并停止。声音由 `momofocus.settings` 的 `soundOn` 控制。
+- 计时快照额外保存 `sessionStartedAt`，用于暂停或重启后保持历史记录的原始日期归属。
 
 ## 最近验证
 
@@ -50,6 +54,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-22：`npm run electron:build` 已完成前端构建、Electron 复制和解包阶段，但因下载 `winCodeSign` 时网络连接被重置而未完成安装器签名资源处理。
 - 2026-09-23：首页标语可原位编辑并通过 `momofocus.slogan` 持久化，侧栏专注统计入口改为强调按钮；`npm run build`、`npm run format:check`、`git diff --check` 通过。
 - 2026-09-23：任务卡详情与开始动作分离，增加任务统计、编辑、颜色预设、删除确认及会话任务 ID 兼容；`npm run build`、`npm run format:check`、`git diff --check` 通过，浏览器交互确认详情打开不会启动计时、明确开始可启动计时。
+- 2026-09-24：固定番茄钟专注/休息状态机，增加任务独立时长、5 秒放弃阈值和暂停不落历史规则；`npm run format:check`、`npm run build`、`git diff --check` 通过，浏览器交互确认自定义任务创建、启动、暂停和放弃入口。
 
 ## 打包与资源约定
 
