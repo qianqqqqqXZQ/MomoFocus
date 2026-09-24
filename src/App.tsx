@@ -126,14 +126,19 @@ const STORAGE_KEYS = {
 } as const;
 const DEFAULT_SLOGAN = "慢一点，\n也很好。";
 const TASK_COLORS = [
-  { id: "sage", label: "浅绿", background: "#edf6f0", border: "#d8e9de" },
-  { id: "sky", label: "浅蓝", background: "#edf5f9", border: "#d9e8f0" },
-  { id: "lemon", label: "浅黄", background: "#fbf5df", border: "#f0e3b8" },
-  { id: "rose", label: "浅粉", background: "#fdf0ee", border: "#f1d9d5" },
-  { id: "orange", label: "浅橙", background: "#fff0e3", border: "#f2ddc6" },
-  { id: "brown", label: "浅棕", background: "#f2e9df", border: "#e4d5c4" },
-  { id: "lavender", label: "浅紫", background: "#f2eff8", border: "#e1dbee" },
-  { id: "mint", label: "薄荷", background: "#e8f5f2", border: "#d2e8e2" },
+  { id: "sage", label: "鼠尾草绿", background: "#e3f3eb", border: "#c8e5d7" },
+  { id: "sky", label: "天空蓝", background: "#e5f1fb", border: "#c8e0f2" },
+  { id: "lemon", label: "奶油黄", background: "#fff5cf", border: "#f1e2a5" },
+  { id: "rose", label: "樱花粉", background: "#ffe7e4", border: "#f2ccc9" },
+  { id: "orange", label: "蜜桃橙", background: "#ffeadb", border: "#f2d0b8" },
+  { id: "brown", label: "燕麦色", background: "#f3eadf", border: "#e2d5c7" },
+  {
+    id: "lavender",
+    label: "薰衣草紫",
+    background: "#eee8fb",
+    border: "#dcd0f0",
+  },
+  { id: "mint", label: "薄荷青", background: "#dff4f0", border: "#c2e4dc" },
 ];
 const DEFAULT_TASK_COLOR = TASK_COLORS[0].id;
 const getTaskColor = (color?: string) =>

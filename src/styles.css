@@ -2,17 +2,22 @@
 
 :root {
   font-family: "Nunito Sans", "Microsoft YaHei", sans-serif;
-  color: #252522;
-  background: #f5f1e8;
+  color: #43515c;
+  background: #f8f7f3;
   font-synthesis: none;
-  --ink: #252522;
-  --muted: #88857b;
-  --paper: #fbf9f3;
-  --line: #e5e0d4;
-  --red: #e75c49;
-  --red-dark: #cc4939;
-  --mint: #88bda9;
-  --mint-light: #e1f0e8;
+  --ink: #43515c;
+  --muted: #8998a0;
+  --paper: #fffdf9;
+  --line: #e3e7e4;
+  --red: #ee9695;
+  --red-dark: #d77b82;
+  --mint: #9bcfbd;
+  --mint-light: #e4f4ed;
+  --sky: #a9d0ec;
+  --lemon: #f2d889;
+  --lavender: #c7b9e8;
+  --peach: #f2c0a8;
+  --shadow-soft: 0 12px 30px rgba(94, 113, 119, 0.08);
 }
 * {
   box-sizing: border-box;
@@ -20,9 +25,7 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: #f5f1e8;
-  background-image: radial-gradient(#d8d1c2 0.55px, transparent 0.55px);
-  background-size: 15px 15px;
+  background: #f8f7f3;
 }
 button,
 input,
@@ -37,7 +40,7 @@ button {
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(231, 92, 73, 0.3);
+  outline: 3px solid rgba(238, 150, 149, 0.38);
   outline-offset: 2px;
 }
 .app-shell {
@@ -2456,5 +2459,246 @@ textarea::placeholder {
   }
   .memo-title-input {
     font-size: 17px;
+  }
+}
+
+/* Macaron theme polish: quiet surfaces, clearer hierarchy, and softer states. */
+.topbar {
+  border-bottom-color: var(--line);
+}
+.brand-mark,
+.eyebrow,
+.empty-kicker,
+.view-tabs button.active,
+.memo-new-button,
+.list-add-task,
+.new-task-button,
+.exit-task-button:hover,
+.stats-heading h1 em {
+  color: var(--red-dark);
+}
+.brand-lockup strong,
+.welcome-copy h1,
+.stats-heading h1,
+.timer-content strong,
+.timer-content b,
+.central-task-state h2,
+.memo-heading h2,
+.metric-card strong,
+.history-total strong {
+  color: var(--ink);
+}
+.icon-button:hover,
+.mobile-menu:hover,
+.more-button:hover,
+.settings-popover .setting-row:hover {
+  background: #f0f5f2;
+  color: var(--ink);
+}
+.mini-popover,
+.task-dialog,
+.stat-card {
+  border-color: var(--line);
+  background: var(--paper);
+  box-shadow: var(--shadow-soft);
+}
+.workspace {
+  padding-top: 68px;
+}
+.daily-summary,
+.focus-panel,
+.right-panel {
+  border-color: var(--line);
+}
+.daily-summary {
+  border-top-color: #d7e8df;
+  border-bottom-color: #d7e8df;
+  background: rgba(228, 244, 237, 0.42);
+  border-radius: 14px;
+  padding: 16px 17px 14px;
+}
+.stats-nav {
+  border-color: #d6e6f1;
+  background: #edf6fb;
+  color: #668da9;
+  border-radius: 9px;
+}
+.stats-nav:hover {
+  border-color: var(--sky);
+  background: #e3f1fa;
+  color: #557d9b;
+}
+.primary-button {
+  border-radius: 10px;
+  background: var(--red);
+  box-shadow: 0 7px 16px rgba(238, 150, 149, 0.2);
+}
+.primary-button:hover {
+  background: var(--red-dark);
+  box-shadow: 0 9px 19px rgba(215, 123, 130, 0.23);
+}
+.secondary-button {
+  border-color: #d8e5df;
+  border-radius: 10px;
+  background: #f2f8f5;
+  color: #6f9381;
+}
+.secondary-button:hover {
+  border-color: var(--mint);
+  background: #e6f4ee;
+  color: #5f876f;
+}
+.abandon-button {
+  color: #c98c8f;
+}
+.timer-wrap {
+  filter: drop-shadow(0 13px 20px rgba(121, 151, 145, 0.08));
+}
+.ring-track {
+  stroke: #e8efeb;
+}
+.ring-progress {
+  stroke: var(--red);
+}
+.timer-wrap.is-running .ring-progress {
+  stroke: var(--mint);
+}
+.live-label {
+  color: #76af96;
+  background: #e6f5ed;
+  border-color: #cfe8db;
+  border-radius: 999px;
+}
+.central-task-row {
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(102, 127, 132, 0.06);
+}
+.central-task-row:hover {
+  box-shadow: 0 8px 20px rgba(102, 127, 132, 0.11);
+}
+.central-task-start,
+.task-dialog-start {
+  color: #638b78;
+}
+.task-dialog-start {
+  border-radius: 9px;
+  background: #9bcfbd;
+  color: #fff;
+  box-shadow: 0 5px 12px rgba(117, 167, 145, 0.16);
+}
+.task-dialog-start:hover {
+  background: #80b9a2;
+}
+.task-row,
+.memo-list-item,
+.todo-thought,
+.memo-editor {
+  border-color: var(--line);
+}
+.task-row:hover,
+.task-row.is-selected,
+.memo-list-item:hover,
+.memo-list-item.active {
+  background: #f5faf8;
+}
+.task-row.is-selected,
+.memo-list-item.active {
+  box-shadow: inset 3px 0 0 var(--mint);
+}
+.check-button.is-checked {
+  background: var(--mint);
+  border-color: var(--mint);
+}
+.view-tabs {
+  border-bottom-color: var(--line);
+}
+.view-tabs button.active {
+  border-color: var(--red);
+}
+.todo-add input,
+.new-task-fields input,
+.new-task-fields select,
+.memo-editor,
+.memo-title-input,
+.memo-body-input {
+  background: rgba(255, 255, 255, 0.68);
+}
+.todo-add input:focus,
+.new-task-fields input:focus,
+.new-task-fields select:focus {
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px rgba(169, 208, 236, 0.18);
+}
+.notes-divider,
+.focus-history,
+.history-total {
+  border-color: var(--line);
+}
+.session-dot,
+.footer-dot,
+.status-dot {
+  background: var(--mint);
+}
+.task-dialog-backdrop {
+  background: rgba(73, 88, 91, 0.24);
+  backdrop-filter: blur(4px);
+}
+.task-dialog {
+  border-radius: 16px;
+}
+.task-dialog-header,
+.task-dialog-actions {
+  border-color: var(--line);
+}
+.task-color-picker button.selected {
+  outline-color: var(--red);
+}
+.task-delete-button {
+  border-color: #f0c6c5;
+  background: #fff2f1;
+  color: #c47c80;
+}
+.task-delete-button:hover {
+  border-color: #e5a6a7;
+  background: #ffe7e5;
+  color: #b96970;
+}
+.new-task-button {
+  border-color: #c8e1d6;
+  background: rgba(232, 247, 240, 0.42);
+}
+.new-task-button:hover {
+  border-color: var(--mint);
+  background: #e8f6ef;
+}
+.stat-card {
+  border-radius: 14px;
+}
+.filter-tabs button.active {
+  background: #e6f4ee;
+  color: #5c927b;
+  border-color: #c8e5d7;
+}
+.bar-track {
+  background: #edf1ef;
+}
+.bar-track span {
+  background: var(--sky);
+}
+.stats-empty span,
+.history-heading svg {
+  color: var(--red);
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    padding-top: 42px;
+  }
+  .daily-summary {
+    padding: 14px;
+  }
+  .focus-panel,
+  .right-panel {
+    border-radius: 14px;
   }
 }
