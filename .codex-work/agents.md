@@ -65,3 +65,14 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - Electron 主进程通过 `app.getAppPath()` 定位打包后的 `assets/tomato.ico`，避免依赖开发目录层级。
 - `release/` 是唯一标准打包输出目录；`release-*` 目录均视为历史临时产物，不纳入版本控制。
 - 只有 `npm run electron:build` 成功后，`release/` 中的桌面程序才包含最新修改。
+
+## iOS 原生版
+
+- `ios/MomoFocus.xcodeproj`：SwiftUI iOS 工程，Bundle ID 为 `com.momofocus.ios`，最低 iOS 16.1。
+- `ios/MomoFocus/`：主应用、模型、本地存储、计时状态机和 SwiftUI 页面。
+- `ios/MomoFocusLiveActivity/`：ActivityKit Widget Extension，负责锁屏实时活动和灵动岛布局。
+- `ios/MomoFocusTests/`、`ios/MomoFocusUITests/`：单元测试和启动 UI 测试。
+- `codemagic.yaml`：macOS 云构建和 App Store 分发导出配置。
+- `generated/ios/INSTALL.md`：签名、构建、安装和 TestFlight 说明。
+- iOS 本地数据使用 `UserDefaults` + Codable，存储键使用 `momofocus.ios.*`，不迁移桌面端 localStorage，不做云同步。
+- Windows 不能执行 `xcodebuild` 或 Apple 签名；必须在 macOS/Xcode 或 Codemagic 上完成 IPA 构建。

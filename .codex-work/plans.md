@@ -1,5 +1,17 @@
 # 当前任务：右侧 Todo / iPhone 风格备忘录切换
 
+## iOS 原生版与灵动岛（进行中）
+
+- [x] 创建桌面端改动备份提交 `9b74843`。
+- [x] 新建独立 SwiftUI iOS 工程目录、模型和本地 Codable 存储。
+- [x] 实现移动端专注、任务、Todo、备忘录、统计和设置页面。
+- [x] 实现真实时间恢复、番茄钟专注/休息状态机、通知和 Live Activity 状态同步。
+- [x] 添加 Dynamic Island Widget Extension、资源、Info.plist 和测试骨架。
+- [x] 添加 Codemagic 云构建配置、IPA 安装说明和独立交付目录。
+- [x] 代码复核修正正计时放弃记录和休息阶段 Live Activity 倒计时。
+- [ ] 在 macOS/Xcode 或 Codemagic 上执行 `xcodebuild` 真正编译验证并生成签名 IPA。
+- [ ] 在支持 Dynamic Island 的真实 iPhone 上验证灵动岛和锁屏 Live Activity。
+
 - [x] 检查现有右侧 Todo、快速记录和 Electron/Vite 结构
 - [x] 创建改动前 Git 备份提交
 - [x] 实现 Todo / 备忘录可访问 Tab 切换
