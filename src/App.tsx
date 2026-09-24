@@ -2176,20 +2176,38 @@ function StatsView({
   );
   const totalSeconds = selected.reduce((sum, s) => sum + s.seconds, 0);
   const abandon = selected.filter((s) => s.status === "abandoned").length;
-  const buckets = [0, 0, 0, 0];
-  selected.forEach((s) => {
-    const minutes = s.seconds / 60;
-    buckets[minutes < 15 ? 0 : minutes < 25 ? 1 : minutes < 45 ? 2 : 3] +=
-      s.seconds;
-  });
-  const bucketTotal = buckets.reduce((a, b) => a + b, 0);
+  const taskDurations = Array.from(
+    selected
+      .reduce((groups, session) => {
+        const taskKey =
+          session.taskId !== undefined
+            ? `id:${session.taskId}`
+            : `name:${session.taskName}`;
+        const current = groups.get(taskKey);
+        groups.set(taskKey, {
+          name: current?.name || session.taskName || "未命名任务",
+          seconds: (current?.seconds ?? 0) + session.seconds,
+        });
+        return groups;
+      }, new Map<string, { name: string; seconds: number }>())
+      .values(),
+  ).sort((a, b) => b.seconds - a.seconds);
+  const taskTotal = taskDurations.reduce((sum, task) => sum + task.seconds, 0);
+  const chartColors = [
+    "#e75c49",
+    "#e7a25c",
+    "#88bda9",
+    "#766d9c",
+    "#5f8fa8",
+    "#c77d8a",
+  ];
   let angle = 0;
-  const gradient = bucketTotal
-    ? buckets
-        .map((value, i) => {
+  const gradient = taskTotal
+    ? taskDurations
+        .map((task, i) => {
           const start = angle;
-          angle += (value / bucketTotal) * 360;
-          return `${["#e75c49", "#e7a25c", "#88bda9", "#766d9c"][i]} ${start}deg ${angle}deg`;
+          angle += (task.seconds / taskTotal) * 360;
+          return `${chartColors[i % chartColors.length]} ${start}deg ${angle}deg`;
         })
         .join(", ")
     : "#e5e0d4 0deg 360deg";
@@ -2315,9 +2333,9 @@ function StatsView({
                 <Clock3 size={15} />
                 时长分布
               </span>
-              <h2>每次专注多久？</h2>
+              <h2>不同任务各占多少？</h2>
             </div>
-            <small>{selected.length} 条记录</small>
+            <small>{taskDurations.length} 个任务</small>
           </div>
           {selected.length === 0 ? (
             <EmptyStats />
@@ -2333,29 +2351,23 @@ function StatsView({
                 </div>
               </div>
               <div className="legend">
-                {["15 分钟以内", "15—25 分钟", "25—45 分钟", "45 分钟以上"].map(
-                  (label, i) => (
-                    <div key={label}>
-                      <i
-                        style={{
-                          background: [
-                            "#e75c49",
-                            "#e7a25c",
-                            "#88bda9",
-                            "#766d9c",
-                          ][i],
-                        }}
-                      />
-                      <span>{label}</span>
-                      <b>
-                        {bucketTotal
-                          ? Math.round((buckets[i] / bucketTotal) * 100)
-                          : 0}
-                        %
-                      </b>
-                    </div>
-                  ),
-                )}
+                {taskDurations.map((task, i) => (
+                  <div key={`${task.name}-${i}`}>
+                    <i
+                      style={{
+                        background: chartColors[i % chartColors.length],
+                      }}
+                    />
+                    <span title={task.name}>{task.name}</span>
+                    <small>{formatDuration(task.seconds)}</small>
+                    <b>
+                      {taskTotal
+                        ? Math.round((task.seconds / taskTotal) * 100)
+                        : 0}
+                      %
+                    </b>
+                  </div>
+                ))}
               </div>
             </div>
           )}

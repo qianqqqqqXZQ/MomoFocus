@@ -55,6 +55,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-23：首页标语可原位编辑并通过 `momofocus.slogan` 持久化，侧栏专注统计入口改为强调按钮；`npm run build`、`npm run format:check`、`git diff --check` 通过。
 - 2026-09-23：任务卡详情与开始动作分离，增加任务统计、编辑、颜色预设、删除确认及会话任务 ID 兼容；`npm run build`、`npm run format:check`、`git diff --check` 通过，浏览器交互确认详情打开不会启动计时、明确开始可启动计时。
 - 2026-09-24：固定番茄钟专注/休息状态机，增加任务独立时长、5 秒放弃阈值和暂停不落历史规则；`npm run format:check`、`npm run build`、`git diff --check` 通过，浏览器交互确认自定义任务创建、启动、暂停和放弃入口。
+- 2026-09-24：统计页“时长分布”改为按任务汇总累计专注时长并显示任务占比，兼容带任务 ID 与旧记录按任务名聚合；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成代码复核。
 
 ## 打包与资源约定
 

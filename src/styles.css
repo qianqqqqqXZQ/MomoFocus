@@ -1349,6 +1349,15 @@ textarea::placeholder {
 .legend span {
   color: var(--muted);
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.legend small {
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
 }
 .legend b {
   font:
