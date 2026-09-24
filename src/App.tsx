@@ -362,9 +362,6 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
   const pendingPomodoroFocusSecondsRef = useRef(0);
-  const [filter, setFilter] = useState<Filter>("day");
-  const [customStart, setCustomStart] = useState(dateKey());
-  const [customEnd, setCustomEnd] = useState(dateKey());
   const timerRef = useRef<number | null>(null);
   const startedAtRef = useRef<number | null>(null);
   const sessionStartedAtRef = useRef<number | null>(null);
@@ -1116,15 +1113,7 @@ function App() {
           }}
         />
       ) : (
-        <StatsView
-          sessions={sessions}
-          filter={filter}
-          setFilter={setFilter}
-          customStart={customStart}
-          setCustomStart={setCustomStart}
-          customEnd={customEnd}
-          setCustomEnd={setCustomEnd}
-        />
+        <StatsView sessions={sessions} />
       )}
       {taskInDetails && (
         <TaskDetailsDialog
@@ -2133,51 +2122,71 @@ function FocusHistory({ sessions }: { sessions: FocusSession[] }) {
   );
 }
 
-function StatsView({
-  sessions,
-  filter,
-  setFilter,
-  customStart,
-  setCustomStart,
-  customEnd,
-  setCustomEnd,
-}: {
-  sessions: FocusSession[];
-  filter: Filter;
-  setFilter: (v: Filter) => void;
-  customStart: string;
-  setCustomStart: (v: string) => void;
-  customEnd: string;
-  setCustomEnd: (v: string) => void;
-}) {
+function StatsView({ sessions }: { sessions: FocusSession[] }) {
   const today = new Date();
-  const range = useMemo(() => {
-    if (filter === "custom") return { start: customStart, end: customEnd };
-    if (filter === "day") return { start: dateKey(), end: dateKey() };
-    if (filter === "week")
-      return { start: dateKey(startOfWeek(today)), end: dateKey(today) };
-    return {
-      start: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`,
-      end: dateKey(today),
-    };
-  }, [filter, customStart, customEnd]);
-  const validRange = Boolean(
-    range.start && range.end && range.start <= range.end,
+  const todayKey = dateKey(today);
+  const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+  const [distributionFilter, setDistributionFilter] = useState<Filter>("month");
+  const [distributionStart, setDistributionStart] = useState(todayKey);
+  const [distributionEnd, setDistributionEnd] = useState(todayKey);
+  const [cumulativeStart, setCumulativeStart] = useState(monthStart);
+  const distributionRange = useMemo(() => {
+    if (distributionFilter === "custom") {
+      return { start: distributionStart, end: distributionEnd };
+    }
+    if (distributionFilter === "day") return { start: todayKey, end: todayKey };
+    if (distributionFilter === "week") {
+      return { start: dateKey(startOfWeek(today)), end: todayKey };
+    }
+    return { start: monthStart, end: todayKey };
+  }, [
+    distributionFilter,
+    distributionStart,
+    distributionEnd,
+    todayKey,
+    monthStart,
+  ]);
+  const distributionValid = Boolean(
+    distributionRange.start &&
+    distributionRange.end &&
+    distributionRange.start <= distributionRange.end,
   );
-  const selected = validRange
+  const distributionSessions = distributionValid
     ? sessions.filter(
         (s) =>
-          (s.date ?? dateKey()) >= range.start &&
-          (s.date ?? dateKey()) <= range.end,
+          (s.date ?? todayKey) >= distributionRange.start &&
+          (s.date ?? todayKey) <= distributionRange.end,
       )
     : [];
-  const completed = selected.filter(
+  const cumulativeValid = Boolean(
+    cumulativeStart && cumulativeStart <= todayKey,
+  );
+  const cumulativeSessions = cumulativeValid
+    ? sessions.filter(
+        (s) =>
+          (s.date ?? todayKey) >= cumulativeStart &&
+          (s.date ?? todayKey) <= todayKey,
+      )
+    : [];
+  const todaySessions = sessions.filter(
+    (s) => (s.date ?? todayKey) === todayKey,
+  );
+  const completedCumulative = cumulativeSessions.filter(
     (s) => (s.status ?? "completed") === "completed",
   );
-  const totalSeconds = selected.reduce((sum, s) => sum + s.seconds, 0);
-  const abandon = selected.filter((s) => s.status === "abandoned").length;
+  const cumulativeSeconds = cumulativeSessions.reduce(
+    (sum, s) => sum + s.seconds,
+    0,
+  );
+  const todayCompleted = todaySessions.filter(
+    (s) => (s.status ?? "completed") === "completed",
+  );
+  const todaySeconds = todaySessions.reduce((sum, s) => sum + s.seconds, 0);
+  const todayAbandoned = todaySessions.filter(
+    (s) => s.status === "abandoned",
+  ).length;
   const taskDurations = Array.from(
-    selected
+    distributionSessions
       .reduce((groups, session) => {
         const taskKey =
           session.taskId !== undefined
@@ -2211,28 +2220,21 @@ function StatsView({
         })
         .join(", ")
     : "#e5e0d4 0deg 360deg";
-  const average =
-    range.start && range.end
-      ? Math.round(
-          totalSeconds /
-            Math.max(
-              1,
-              Math.round(
-                (new Date(range.end).getTime() -
-                  new Date(range.start).getTime()) /
-                  86400000,
-              ) + 1,
-            ),
-        )
-      : 0;
-  const monthKey = dateKey(today).slice(0, 7);
-  const monthSessions = sessions.filter((s) =>
-    (s.date ?? dateKey()).startsWith(monthKey),
-  );
+  const cumulativeDays = cumulativeValid
+    ? Math.max(
+        1,
+        Math.round(
+          (new Date(todayKey).getTime() - new Date(cumulativeStart).getTime()) /
+            86400000,
+        ) + 1,
+      )
+    : 1;
+  const cumulativeAverage = Math.round(cumulativeSeconds / cumulativeDays);
   const slots = Array.from({ length: 5 }, (_, i) =>
-    monthSessions
+    distributionSessions
       .filter((s) => {
         const hour = s.startedAt ? new Date(s.startedAt).getHours() : 9;
+        if (i === 4) return hour >= 22 || hour < 2;
         return hour >= [6, 10, 14, 18, 22][i] && hour < [10, 14, 18, 22, 24][i];
       })
       .reduce((sum, s) => sum + s.seconds, 0),
@@ -2258,74 +2260,157 @@ function StatsView({
           </span>
         </div>
       </div>
-      <div className="filter-bar">
-        <div className="filter-tabs">
-          {(
-            [
-              ["day", "今日"],
-              ["week", "本周"],
-              ["month", "本月"],
-              ["custom", "自定义"],
-            ] as [Filter, string][]
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              className={filter === key ? "active" : ""}
-              onClick={() => setFilter(key)}
-            >
-              {label}
-            </button>
+      <section className="stat-card distribution-card">
+        <div className="distribution-toolbar">
+          <div className="card-heading">
+            <div>
+              <span className="section-kicker">
+                <Clock3 size={15} />
+                专注时段分布
+              </span>
+              <h2>你通常在什么时候进入状态？</h2>
+            </div>
+            <small>{distributionSessions.length} 条记录</small>
+          </div>
+          <div className="filter-bar">
+            <div className="filter-tabs">
+              {(
+                [
+                  ["day", "今日"],
+                  ["week", "本周"],
+                  ["month", "本月"],
+                  ["custom", "自定义"],
+                ] as [Filter, string][]
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  className={distributionFilter === key ? "active" : ""}
+                  onClick={() => setDistributionFilter(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {distributionFilter === "custom" && (
+              <div className="date-fields">
+                <label>
+                  从
+                  <input
+                    type="date"
+                    value={distributionStart}
+                    onChange={(e) => setDistributionStart(e.target.value)}
+                  />
+                </label>
+                <span>—</span>
+                <label>
+                  至
+                  <input
+                    type="date"
+                    value={distributionEnd}
+                    onChange={(e) => setDistributionEnd(e.target.value)}
+                  />
+                </label>
+              </div>
+            )}
+            {distributionFilter === "custom" && !distributionValid && (
+              <span className="range-error">请选择有效的日期范围</span>
+            )}
+            <span className="range-label">
+              <CalendarDays size={14} />
+              {distributionRange.start === distributionRange.end
+                ? distributionRange.start
+                : `${distributionRange.start} — ${distributionRange.end}`}
+            </span>
+          </div>
+        </div>
+        <div className="time-chart">
+          {slots.map((value, i) => (
+            <div className="time-column" key={i}>
+              <div className="bar-track">
+                <span
+                  style={{
+                    height: `${value ? Math.max((value / maxSlot) * 100, 4) : 0}%`,
+                  }}
+                />
+              </div>
+              <b>{["06—10", "10—14", "14—18", "18—22", "22—02"][i]}</b>
+              <small>{value ? formatDuration(value) : "暂无"}</small>
+            </div>
           ))}
         </div>
-        {filter === "custom" && (
-          <div className="date-fields">
-            <label>
-              从
-              <input
-                type="date"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-              />
-            </label>
-            <span>—</span>
-            <label>
-              至
-              <input
-                type="date"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-              />
-            </label>
+      </section>
+      <div className="summary-columns">
+        <section className="stat-card average-card">
+          <div className="card-heading">
+            <div>
+              <span className="section-kicker">
+                <TrendingUp size={15} />
+                累计专注
+              </span>
+              <h2>从哪一天开始统计？</h2>
+            </div>
           </div>
-        )}
-        {filter === "custom" && !validRange && (
-          <span className="range-error">请选择有效的日期范围</span>
-        )}
-        <span className="range-label">
-          <CalendarDays size={14} />
-          {range.start === range.end
-            ? range.start
-            : `${range.start} — ${range.end}`}
-        </span>
+          <label className="cumulative-date">
+            <CalendarDays size={14} />
+            <span>开始日期</span>
+            <input
+              type="date"
+              max={todayKey}
+              value={cumulativeStart}
+              onChange={(e) => setCumulativeStart(e.target.value)}
+            />
+          </label>
+          {!cumulativeValid && (
+            <span className="range-error">请选择今天或更早的日期</span>
+          )}
+          <div className="summary-stats">
+            <div className="big-stat">
+              <strong>
+                {cumulativeValid ? completedCumulative.length : 0}
+              </strong>
+              <span>总次数</span>
+            </div>
+            <div className="big-stat">
+              <strong>
+                {cumulativeValid ? formatDuration(cumulativeSeconds) : "0 分钟"}
+              </strong>
+              <span>总时长</span>
+            </div>
+            <div className="big-stat">
+              <strong>
+                {cumulativeValid ? formatDuration(cumulativeAverage) : "0 分钟"}
+              </strong>
+              <span>日均时长</span>
+            </div>
+          </div>
+        </section>
+        <section className="stat-card today-card">
+          <div className="card-heading">
+            <div>
+              <span className="section-kicker">
+                <Target size={15} />
+                今日专注
+              </span>
+              <h2>{todayKey}</h2>
+            </div>
+          </div>
+          <div className="summary-stats">
+            <div className="big-stat">
+              <strong>{todayCompleted.length}</strong>
+              <span>今日次数</span>
+            </div>
+            <div className="big-stat">
+              <strong>{formatDuration(todaySeconds)}</strong>
+              <span>今日时长</span>
+            </div>
+            <div className="big-stat">
+              <strong>{todayAbandoned}</strong>
+              <span>放弃次数</span>
+            </div>
+          </div>
+        </section>
       </div>
-      <div className="stats-grid">
-        <div className="metric-card accent">
-          <span>专注次数</span>
-          <strong>{completed.length}</strong>
-          <small>完成的专注记录</small>
-        </div>
-        <div className="metric-card">
-          <span>专注时长</span>
-          <strong>{formatDuration(totalSeconds)}</strong>
-          <small>本筛选范围累计</small>
-        </div>
-        <div className="metric-card">
-          <span>放弃次数</span>
-          <strong>{abandon}</strong>
-          <small>中途结束的记录</small>
-        </div>
-      </div>
-      <div className="stats-columns">
+      <section className="stats-columns">
         <section className="stat-card distribution-card">
           <div className="card-heading">
             <div>
@@ -2337,7 +2422,7 @@ function StatsView({
             </div>
             <small>{taskDurations.length} 个任务</small>
           </div>
-          {selected.length === 0 ? (
+          {distributionSessions.length === 0 ? (
             <EmptyStats />
           ) : (
             <div className="donut-layout">
@@ -2346,7 +2431,14 @@ function StatsView({
                 style={{ background: `conic-gradient(${gradient})` }}
               >
                 <div>
-                  <strong>{formatDuration(totalSeconds)}</strong>
+                  <strong>
+                    {formatDuration(
+                      distributionSessions.reduce(
+                        (sum, s) => sum + s.seconds,
+                        0,
+                      ),
+                    )}
+                  </strong>
                   <span>总专注</span>
                 </div>
               </div>
@@ -2372,48 +2464,6 @@ function StatsView({
             </div>
           )}
         </section>
-        <section className="stat-card average-card">
-          <div className="card-heading">
-            <div>
-              <span className="section-kicker">
-                <TrendingUp size={15} />
-                持续节奏
-              </span>
-              <h2>累计与日均</h2>
-            </div>
-          </div>
-          <div className="big-stat">
-            <strong>{completed.length}</strong>
-            <span>累计专注次数</span>
-          </div>
-          <div className="big-stat">
-            <strong>{formatDuration(average)}</strong>
-            <span>范围内日均时长</span>
-          </div>
-        </section>
-      </div>
-      <section className="stat-card time-chart-card">
-        <div className="card-heading">
-          <div>
-            <span className="section-kicker">
-              <BarChart3 size={15} />
-              本月专注时段
-            </span>
-            <h2>你通常在什么时候进入状态？</h2>
-          </div>
-          <small>{monthSessions.length} 条本月记录</small>
-        </div>
-        <div className="time-chart">
-          {slots.map((value, i) => (
-            <div className="time-column" key={i}>
-              <div className="bar-track">
-                <span style={{ height: `${(value / maxSlot) * 100}%` }} />
-              </div>
-              <b>{["06—10", "10—14", "14—18", "18—22", "22—02"][i]}</b>
-              <small>{value ? formatDuration(value) : "暂无"}</small>
-            </div>
-          ))}
-        </div>
       </section>
     </section>
   );

@@ -1276,9 +1276,30 @@ textarea::placeholder {
 }
 .stats-columns {
   display: grid;
-  grid-template-columns: 1.4fr 0.8fr;
+  grid-template-columns: 1fr;
   gap: 14px;
   margin-top: 14px;
+}
+.summary-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+.distribution-toolbar {
+  display: grid;
+  gap: 18px;
+}
+.distribution-toolbar .filter-bar {
+  margin: 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+}
+.distribution-toolbar .range-label {
+  margin-left: auto;
 }
 .card-heading {
   display: flex;
@@ -1368,9 +1389,46 @@ textarea::placeholder {
   display: flex;
   flex-direction: column;
 }
+.today-card {
+  display: flex;
+  flex-direction: column;
+}
+.cumulative-date {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 22px;
+}
+.cumulative-date svg {
+  color: var(--red);
+}
+.cumulative-date input {
+  margin-left: auto;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--ink);
+  font:
+    10px "DM Mono",
+    monospace;
+  padding: 6px;
+  border-radius: 3px;
+}
+.summary-columns .range-error {
+  display: block;
+  margin-top: 8px;
+}
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: auto;
+  padding-top: 22px;
+}
 .big-stat {
   border-bottom: 1px solid var(--line);
-  padding: 24px 0 17px;
+  padding: 0 0 17px;
 }
 .big-stat:last-child {
   border: 0;
@@ -1395,27 +1453,29 @@ textarea::placeholder {
   display: flex;
   align-items: stretch;
   justify-content: space-around;
-  gap: 20px;
-  padding: 30px 10px 0;
+  gap: 18px;
+  padding: 30px 18px 0;
 }
 .time-column {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 45px;
+  min-width: 42px;
 }
 .bar-track {
-  width: 100%;
+  width: 30px;
   height: 145px;
-  background: #eee9df;
+  background: #f0ece4;
+  border-radius: 999px;
   display: flex;
   align-items: flex-end;
+  overflow: hidden;
 }
 .bar-track span {
   width: 100%;
   background: var(--red);
-  min-height: 3px;
+  border-radius: 999px;
   transition: height 0.35s;
 }
 .time-column b {
@@ -1473,7 +1533,8 @@ textarea::placeholder {
     margin-top: 12px;
   }
   .stats-grid,
-  .stats-columns {
+  .stats-columns,
+  .summary-columns {
     grid-template-columns: 1fr;
   }
   .metric-card {
@@ -1500,8 +1561,21 @@ textarea::placeholder {
   }
   .time-chart {
     gap: 7px;
-    padding-left: 0;
-    padding-right: 0;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  .distribution-toolbar .filter-bar {
+    align-items: flex-start;
+  }
+  .distribution-toolbar .range-label {
+    width: 100%;
+    margin-left: 0;
+  }
+  .summary-stats {
+    gap: 12px;
+  }
+  .cumulative-date input {
+    max-width: 138px;
   }
   .time-column b {
     font-size: 9px;
