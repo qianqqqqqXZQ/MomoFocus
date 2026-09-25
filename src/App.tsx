@@ -329,6 +329,7 @@ function App() {
   const [taskBreakMinutesInput, setTaskBreakMinutesInput] = useState(
     DEFAULT_BREAK_MINUTES,
   );
+  const [taskColorInput, setTaskColorInput] = useState(DEFAULT_TASK_COLOR);
   const [todoInput, setTodoInput] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [mode, setMode] = useState<Mode>("focus");
@@ -791,10 +792,22 @@ function App() {
         type: taskTypeInput,
         focusMinutes: taskFocusMinutesInput,
         breakMinutes: taskBreakMinutesInput,
-        color: DEFAULT_TASK_COLOR,
+        color: taskColorInput,
       },
     ]);
     setTaskInput("");
+    setTaskTypeInput("pomodoro");
+    setTaskFocusMinutesInput(DEFAULT_FOCUS_MINUTES);
+    setTaskBreakMinutesInput(DEFAULT_BREAK_MINUTES);
+    setTaskColorInput(DEFAULT_TASK_COLOR);
+    setIsCreatingTask(false);
+  };
+  const cancelTaskCreation = () => {
+    setTaskInput("");
+    setTaskTypeInput("pomodoro");
+    setTaskFocusMinutesInput(DEFAULT_FOCUS_MINUTES);
+    setTaskBreakMinutesInput(DEFAULT_BREAK_MINUTES);
+    setTaskColorInput(DEFAULT_TASK_COLOR);
     setIsCreatingTask(false);
   };
   const addTodo = () => {
@@ -916,6 +929,28 @@ function App() {
                 <option value="pomodoro">番茄钟</option>
                 <option value="countup">正计时 · 自由记录</option>
               </select>
+              <div className="new-task-color-field">
+                <span>任务颜色</span>
+                <div
+                  className="new-task-color-picker"
+                  aria-label="选择任务颜色"
+                >
+                  {TASK_COLORS.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={taskColorInput === option.id ? "selected" : ""}
+                      style={{
+                        background: option.background,
+                        borderColor: option.border,
+                      }}
+                      aria-label={option.label}
+                      aria-pressed={taskColorInput === option.id}
+                      onClick={() => setTaskColorInput(option.id)}
+                    />
+                  ))}
+                </div>
+              </div>
               {taskTypeInput === "pomodoro" && (
                 <div className="task-duration-fields">
                   <label>
@@ -968,10 +1003,7 @@ function App() {
                 <Plus size={16} />
                 创建专注任务
               </button>
-              <button
-                className="text-button"
-                onClick={() => setIsCreatingTask(false)}
-              >
+              <button className="text-button" onClick={cancelTaskCreation}>
                 取消
               </button>
             </div>
@@ -979,7 +1011,10 @@ function App() {
         ) : (
           <button
             className="new-task-button"
-            onClick={() => setIsCreatingTask(true)}
+            onClick={() => {
+              setTaskColorInput(DEFAULT_TASK_COLOR);
+              setIsCreatingTask(true);
+            }}
           >
             <Plus size={18} />
             新建专注任务

@@ -128,3 +128,11 @@
 - [x] 让标语两行在悬停时同步变色，避免只有第一行变化。
 - [x] 运行 `npm run format:check`、`npm run build` 和 `git diff --check`。
 - [x] 完成改动后的代码复核。
+
+## 创建任务时选择颜色
+
+- [x] 创建改动前 Git 备份提交 `60fee91`。
+- [x] 在新建专注任务表单中增加八色任务颜色选择器。
+- [x] 创建任务时保存所选颜色，并在取消或完成后重置表单状态。
+- [x] 运行 `npm run format:check`、`npm run build` 和 `git diff --check`。
+- [x] 完成改动后的代码复核。

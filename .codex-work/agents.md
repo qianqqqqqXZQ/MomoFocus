@@ -21,6 +21,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 番茄钟任务保存 `focusMinutes` 和 `breakMinutes`；旧任务读取时默认补齐为 25/5。运行中的番茄钟固定按专注 -> 休息 -> 完成流转，休息结束才增加完成番茄数。
 - 运行界面仅保留暂停/继续与放弃；暂停不写历史，放弃时专注累计不足 5 秒不写入历史并弹窗提示，休息阶段放弃记录为 `abandoned` 但不计完成。
 - 专注任务可选浅绿、浅蓝、浅黄、浅粉、浅橙、浅棕、浅紫、薄荷色；旧任务无颜色时固定回退为浅绿。
+- 新建专注任务表单可直接选择上述颜色，颜色会随任务保存；打开新建表单时默认选择浅绿，取消或创建后重置颜色和时长输入。
 - 新专注记录包含 `taskId`；旧记录无 ID 时按任务名称匹配，改名时同步迁移匹配记录。
 - `localStorage` keys：`momofocus.todos`、`momofocus.notes`、`momofocus.tasks`、`momofocus.sessions`、`momofocus.slogan`。
 - localStorage 读取失败或数据结构异常时回退到默认数据；存储写入失败不会阻塞内存中的界面操作。
@@ -60,6 +61,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-24：完成清新马卡龙视觉升级，统一主题变量和任务色板，优化首页、计时器、任务列表、Todo / 备忘录、统计页和任务详情弹窗；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成窄屏浏览器运行态检查与 code review。开发检查时发现 `5173` 已有 Vite 服务，因此复用现有 localhost 页面验证。
 - 2026-09-25：修正任务入口配色，任务列表“开始”文字改为黑色，“新建专注任务”按钮移除绿色背景并改为透明底色；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
 - 2026-09-25：将首页“慢一点，也很好。”的悬停色改为深薄荷绿，并让两行同步变色；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
+- 2026-09-25：新建专注任务时增加颜色选择并保存所选预设；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
 
 ## 打包与资源约定
 
