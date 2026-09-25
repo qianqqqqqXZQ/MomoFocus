@@ -12,6 +12,7 @@
   --red: #ee9695;
   --red-dark: #d77b82;
   --mint: #9bcfbd;
+  --mint-dark: #6d9c86;
   --mint-light: #e4f4ed;
   --sky: #a9d0ec;
   --lemon: #f2d889;
@@ -263,7 +264,10 @@ textarea:focus-visible {
   cursor: pointer;
 }
 .slogan-trigger:hover {
-  color: var(--red-dark);
+  color: var(--mint-dark);
+}
+.slogan-trigger:hover .slogan-accent {
+  color: var(--mint-dark);
 }
 .slogan-trigger:focus-visible {
   outline: 2px solid var(--red);
@@ -2578,7 +2582,7 @@ textarea::placeholder {
 }
 .central-task-start,
 .task-dialog-start {
-  color: #638b78;
+  color: var(--ink);
 }
 .task-dialog-start {
   border-radius: 9px;
@@ -2664,12 +2668,12 @@ textarea::placeholder {
   color: #b96970;
 }
 .new-task-button {
-  border-color: #c8e1d6;
-  background: rgba(232, 247, 240, 0.42);
+  border-color: #d4cbbd;
+  background: transparent;
 }
 .new-task-button:hover {
-  border-color: var(--mint);
-  background: #e8f6ef;
+  border-color: #bdb4a7;
+  background: rgba(255, 255, 255, 0.28);
 }
 .stat-card {
   border-radius: 14px;

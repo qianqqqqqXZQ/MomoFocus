@@ -1,0 +1,29 @@
+workflows:
+  ios-release:
+    name: MomoFocus iOS Release
+    environment:
+      groups:
+        - app_store_connect
+      vars:
+        BUNDLE_ID: com.momofocus.ios
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.momofocus.ios
+      xcode: latest
+    scripts:
+      - name: Resolve project and archive
+        script: |
+          xcodebuild -project ios/MomoFocus.xcodeproj -scheme MomoFocus -configuration Release -sdk iphoneos -archivePath build/MomoFocus.xcarchive archive CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID"
+      - name: Export IPA
+        script: |
+          xcodebuild -exportArchive -archivePath build/MomoFocus.xcarchive -exportPath build/ipa -exportOptionsPlist ios/ExportOptions.plist
+    artifacts:
+      - build/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      email:
+        recipients:
+          - $CM_EMAIL
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false

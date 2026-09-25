@@ -58,6 +58,8 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-24：统计页“时长分布”改为按任务汇总累计专注时长并显示任务占比，兼容带任务 ID 与旧记录按任务名聚合；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成代码复核。
 - 2026-09-24：统计页重构为独立的专注时段分布、累计专注和今日专注区域；日 / 周 / 月 / 自定义只控制分布卡片，累计统计支持起始日期，时段柱状图改为圆滑胶囊柱并修复 22—02 跨午夜分组；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成代码复核。
 - 2026-09-24：完成清新马卡龙视觉升级，统一主题变量和任务色板，优化首页、计时器、任务列表、Todo / 备忘录、统计页和任务详情弹窗；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成窄屏浏览器运行态检查与 code review。开发检查时发现 `5173` 已有 Vite 服务，因此复用现有 localhost 页面验证。
+- 2026-09-25：修正任务入口配色，任务列表“开始”文字改为黑色，“新建专注任务”按钮移除绿色背景并改为透明底色；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
+- 2026-09-25：将首页“慢一点，也很好。”的悬停色改为深薄荷绿，并让两行同步变色；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
 
 ## 打包与资源约定
 

@@ -114,3 +114,17 @@
 - [x] 优化首页欢迎区、摘要、计时环、任务列表、Todo / 备忘录和弹窗的层级与交互状态。
 - [x] 统一统计页卡片、筛选项、图表和空状态的主题视觉，并补充窄屏布局细节。
 - [x] 运行 `npm run format:check`、`npm run build` 和 `git diff --check`，完成浏览器运行态检查与 code review。
+
+## 任务入口颜色修正
+
+- [x] 将任务列表“开始”文字恢复为黑色。
+- [x] 移除“新建专注任务”按钮的绿色背景，改为透明底色和中性悬停状态。
+- [x] 运行 `npm run format:check`、`npm run build` 和 `git diff --check`。
+- [x] 完成改动后的代码复核。
+
+## 首页标语悬停配色
+
+- [x] 将标语悬停色从珊瑚红调整为低饱和深薄荷绿。
+- [x] 让标语两行在悬停时同步变色，避免只有第一行变化。
+- [x] 运行 `npm run format:check`、`npm run build` 和 `git diff --check`。
+- [x] 完成改动后的代码复核。
