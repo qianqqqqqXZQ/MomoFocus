@@ -14,6 +14,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 ## 当前功能约定
 
 - 右侧面板默认显示 `Todo`，可切换到 `备忘录`。
+- 桌面端右侧工作区内部采用“列表在左、想法/编辑区在右”的双栏布局；Todo 列表和想法历史、备忘录列表分别有独立滚动边界。窗口宽度较窄时自动恢复为上下堆叠。
 - Todo 支持点击选中并记录专属想法；想法保存在对应 Todo 的 `thoughts` 字段中，兼容没有该字段的旧数据。
 - 备忘录支持标题、纯文本正文、多篇列表、自动保存和直接删除。
 - 中间专注任务卡点击打开详情，右侧“开始”才启动计时；活动任务标题也可打开详情。
@@ -64,6 +65,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-25：新建专注任务时增加颜色选择并保存所选预设；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
 - 2026-09-26：将备忘录列表选中指示条从薄荷绿调整为天空蓝，同时保持任务列表选中态不变；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
 - 2026-09-26：扩大备忘录编辑器和正文输入区，桌面端使用可伸展编辑布局，窄屏保留 420px 编辑器和 320px 正文最小高度；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成桌面/窄屏样式 code review。运行态窄屏检查确认正文区域约 338px 可见且页面可继续滚动。
+- 2026-09-26：将 Todo 想法区和备忘录编辑区移到各自列表右侧，桌面端扩展右侧工作区宽度并设置列表独立滚动；中等及窄窗口自动堆叠。`npm run format:check`、`npm run build`、`git diff --check` 通过；运行态确认桌面双栏尺寸和 700px 窄窗口无横向溢出，并完成 code review。
 
 ## 打包与资源约定
 

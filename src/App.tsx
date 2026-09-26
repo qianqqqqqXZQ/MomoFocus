@@ -1944,191 +1944,205 @@ function RightPanel({
         </button>
       </div>
       {rightPanelView === "todo" ? (
-        <>
-          <div className="section-title-row">
-            <div>
-              <span className="section-kicker">
-                <CheckCircle2 size={15} />
-                普通待办
-              </span>
-              <h2>把日常留在这里。</h2>
+        <div className="todo-workspace">
+          <div className="todo-list-pane">
+            <div className="section-title-row">
+              <div>
+                <span className="section-kicker">
+                  <CheckCircle2 size={15} />
+                  普通待办
+                </span>
+                <h2>把日常留在这里。</h2>
+              </div>
+            </div>
+            <div className="task-list todo-list">
+              {todos.map((todo) => (
+                <div
+                  className={`task-row todo-row ${todo.done ? "is-done" : ""} ${selectedTodoId === todo.id ? "is-selected" : ""}`}
+                  key={todo.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => selectTodo(todo)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      selectTodo(todo);
+                    }
+                  }}
+                >
+                  <button
+                    className="check-button"
+                    aria-label={
+                      todo.done
+                        ? `标记${todo.text}为未完成`
+                        : `完成${todo.text}`
+                    }
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setTodos((items) =>
+                        items.map((item) =>
+                          item.id === todo.id
+                            ? { ...item, done: !item.done }
+                            : item,
+                        ),
+                      );
+                    }}
+                  >
+                    {todo.done && <Check size={14} />}
+                  </button>
+                  <span className="task-text">
+                    {todo.text}
+                    <small>{(todo.thoughts ?? []).length} 条想法</small>
+                  </span>
+                  <button
+                    className="delete-button"
+                    aria-label={`删除${todo.text}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setTodos((items) =>
+                        items.filter((item) => item.id !== todo.id),
+                      );
+                    }}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="add-task todo-add">
+              <Plus size={16} />
+              <input
+                value={todoInput}
+                onChange={(event) => setTodoInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") addTodo();
+                }}
+                placeholder="添加一件待办"
+                aria-label="添加一件待办"
+              />
             </div>
           </div>
-          <div className="task-list todo-list">
-            {todos.map((todo) => (
-              <div
-                className={`task-row todo-row ${todo.done ? "is-done" : ""} ${selectedTodoId === todo.id ? "is-selected" : ""}`}
-                key={todo.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => selectTodo(todo)}
+          <div className="todo-thought-pane">
+            <div className="notes-divider">
+              <span>
+                {selectedTodo ? `${selectedTodo.text} 的想法` : "Todo 想法"}
+              </span>
+              <i />
+            </div>
+            <div className="quick-note todo-thought-editor">
+              <textarea
+                value={thoughtInput}
+                onChange={(event) => setThoughtInput(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    selectTodo(todo);
-                  }
+                  if ((event.ctrlKey || event.metaKey) && event.key === "Enter")
+                    addTodoThought();
                 }}
+                placeholder={
+                  selectedTodo ? "记录这个 Todo 的想法..." : "先点击一个 Todo"
+                }
+                aria-label="Todo 想法"
+                disabled={!selectedTodo}
+              />
+              <button
+                onClick={addTodoThought}
+                disabled={!selectedTodo || !thoughtInput.trim()}
               >
-                <button
-                  className="check-button"
-                  aria-label={
-                    todo.done ? `标记${todo.text}为未完成` : `完成${todo.text}`
-                  }
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setTodos((items) =>
-                      items.map((item) =>
-                        item.id === todo.id
-                          ? { ...item, done: !item.done }
-                          : item,
-                      ),
-                    );
-                  }}
-                >
-                  {todo.done && <Check size={14} />}
-                </button>
-                <span className="task-text">
-                  {todo.text}
-                  <small>{(todo.thoughts ?? []).length} 条想法</small>
-                </span>
-                <button
-                  className="delete-button"
-                  aria-label={`删除${todo.text}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setTodos((items) =>
-                      items.filter((item) => item.id !== todo.id),
-                    );
-                  }}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ))}
+                保存想法
+              </button>
+            </div>
+            <div className="todo-thought-list">
+              {(selectedTodo?.thoughts ?? []).map((thought) => (
+                <div className="todo-thought" key={thought.id}>
+                  <p>{thought.text}</p>
+                  <time>{noteTime(thought.createdAt)}</time>
+                </div>
+              ))}
+              {selectedTodo && (selectedTodo.thoughts ?? []).length === 0 && (
+                <p className="empty-thoughts">还没有想法，写下第一条吧。</p>
+              )}
+            </div>
           </div>
-          <div className="add-task todo-add">
-            <Plus size={16} />
-            <input
-              value={todoInput}
-              onChange={(event) => setTodoInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") addTodo();
-              }}
-              placeholder="添加一件待办"
-              aria-label="添加一件待办"
-            />
-          </div>
-          <div className="notes-divider">
-            <span>
-              {selectedTodo ? `${selectedTodo.text} 的想法` : "Todo 想法"}
-            </span>
-            <i />
-          </div>
-          <div className="quick-note todo-thought-editor">
-            <textarea
-              value={thoughtInput}
-              onChange={(event) => setThoughtInput(event.target.value)}
-              onKeyDown={(event) => {
-                if ((event.ctrlKey || event.metaKey) && event.key === "Enter")
-                  addTodoThought();
-              }}
-              placeholder={
-                selectedTodo ? "记录这个 Todo 的想法..." : "先点击一个 Todo"
-              }
-              aria-label="Todo 想法"
-              disabled={!selectedTodo}
-            />
-            <button
-              onClick={addTodoThought}
-              disabled={!selectedTodo || !thoughtInput.trim()}
-            >
-              保存想法
-            </button>
-          </div>
-          <div className="todo-thought-list">
-            {(selectedTodo?.thoughts ?? []).map((thought) => (
-              <div className="todo-thought" key={thought.id}>
-                <p>{thought.text}</p>
-                <time>{noteTime(thought.createdAt)}</time>
-              </div>
-            ))}
-            {selectedTodo && (selectedTodo.thoughts ?? []).length === 0 && (
-              <p className="empty-thoughts">还没有想法，写下第一条吧。</p>
-            )}
-          </div>
-        </>
+        </div>
       ) : (
         <div className="memo-panel">
-          <div className="memo-heading">
-            <div>
-              <span className="section-kicker">
-                <FileText size={15} />
-                我的备忘录
-              </span>
-              <h2>把想法留在这里。</h2>
-            </div>
-            <button
-              className="memo-new-button"
-              onClick={createMemo}
-              aria-label="新建备忘录"
-            >
-              <Plus size={16} />
-              新建
-            </button>
-          </div>
-          <div className="memo-list" role="listbox" aria-label="备忘录列表">
-            {memoNotes.map((note) => (
-              <button
-                key={note.id}
-                role="option"
-                aria-selected={selectedMemoId === note.id}
-                className={`memo-list-item ${selectedMemoId === note.id ? "active" : ""}`}
-                onClick={() => setSelectedMemoId(note.id)}
-              >
-                <strong>{note.title || "无标题"}</strong>
-                <span>{note.body || "暂无内容"}</span>
-                <time>{noteTime(note.updatedAt)}</time>
-              </button>
-            ))}
-          </div>
-          {selectedMemo ? (
-            <div className="memo-editor">
-              <div className="memo-editor-toolbar">
-                <span>自动保存</span>
+          <div className="memo-workspace">
+            <div className="memo-list-pane">
+              <div className="memo-heading">
+                <div>
+                  <span className="section-kicker">
+                    <FileText size={15} />
+                    我的备忘录
+                  </span>
+                  <h2>把想法留在这里。</h2>
+                </div>
                 <button
-                  className="delete-button"
-                  onClick={deleteMemo}
-                  aria-label="删除当前备忘录"
+                  className="memo-new-button"
+                  onClick={createMemo}
+                  aria-label="新建备忘录"
                 >
-                  <Trash2 size={15} />
+                  <Plus size={16} />
+                  新建
                 </button>
               </div>
-              <input
-                className="memo-title-input"
-                value={selectedMemo.title}
-                onChange={(event) => updateMemo("title", event.target.value)}
-                placeholder="标题"
-                aria-label="备忘录标题"
-              />
-              <textarea
-                className="memo-body-input"
-                value={selectedMemo.body}
-                onChange={(event) => updateMemo("body", event.target.value)}
-                placeholder="开始记录..."
-                aria-label="备忘录正文"
-              />
+              <div className="memo-list" role="listbox" aria-label="备忘录列表">
+                {memoNotes.map((note) => (
+                  <button
+                    key={note.id}
+                    role="option"
+                    aria-selected={selectedMemoId === note.id}
+                    className={`memo-list-item ${selectedMemoId === note.id ? "active" : ""}`}
+                    onClick={() => setSelectedMemoId(note.id)}
+                  >
+                    <strong>{note.title || "无标题"}</strong>
+                    <span>{note.body || "暂无内容"}</span>
+                    <time>{noteTime(note.updatedAt)}</time>
+                  </button>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="memo-empty">
-              <FileText size={28} />
-              <strong>还没有备忘录</strong>
-              <span>记录一个想法，让它有地方安放。</span>
-              <button className="primary-button" onClick={createMemo}>
-                <Plus size={16} />
-                新建备忘录
-              </button>
+            <div className="memo-editor-pane">
+              {selectedMemo ? (
+                <div className="memo-editor">
+                  <div className="memo-editor-toolbar">
+                    <span>自动保存</span>
+                    <button
+                      className="delete-button"
+                      onClick={deleteMemo}
+                      aria-label="删除当前备忘录"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                  <input
+                    className="memo-title-input"
+                    value={selectedMemo.title}
+                    onChange={(event) =>
+                      updateMemo("title", event.target.value)
+                    }
+                    placeholder="标题"
+                    aria-label="备忘录标题"
+                  />
+                  <textarea
+                    className="memo-body-input"
+                    value={selectedMemo.body}
+                    onChange={(event) => updateMemo("body", event.target.value)}
+                    placeholder="开始记录..."
+                    aria-label="备忘录正文"
+                  />
+                </div>
+              ) : (
+                <div className="memo-empty">
+                  <FileText size={28} />
+                  <strong>还没有备忘录</strong>
+                  <span>记录一个想法，让它有地方安放。</span>
+                  <button className="primary-button" onClick={createMemo}>
+                    <Plus size={16} />
+                    新建备忘录
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
     </section>

@@ -223,7 +223,7 @@ textarea:focus-visible {
 }
 .workspace {
   display: grid;
-  grid-template-columns: minmax(220px, 0.68fr) minmax(570px, 1.7fr);
+  grid-template-columns: minmax(220px, 0.58fr) minmax(840px, 1.42fr);
   gap: clamp(55px, 9vw, 145px);
   flex: 1;
   padding: 76px 0 45px;
@@ -366,8 +366,8 @@ textarea:focus-visible {
 }
 .main-grid {
   display: grid;
-  grid-template-columns: minmax(350px, 0.95fr) minmax(330px, 1fr);
-  gap: clamp(40px, 6vw, 100px);
+  grid-template-columns: minmax(300px, 0.72fr) minmax(480px, 1.28fr);
+  gap: clamp(28px, 4vw, 60px);
 }
 .focus-panel {
   border-right: 1px solid var(--line);
@@ -884,6 +884,21 @@ textarea::placeholder {
   }
   .focus-panel {
     padding-right: 35px;
+  }
+  .todo-workspace,
+  .memo-workspace {
+    display: block;
+    min-height: 0;
+  }
+  .todo-thought-pane,
+  .memo-editor-pane {
+    min-height: 0;
+  }
+  .todo-thought-pane {
+    margin-top: 28px;
+  }
+  .memo-editor-pane {
+    margin-top: 18px;
   }
 }
 @media (max-width: 900px) {
@@ -2318,8 +2333,58 @@ textarea::placeholder {
 .right-panel {
   min-width: 0;
 }
-.memo-panel {
+.todo-workspace,
+.memo-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: clamp(20px, 2.4vw, 34px);
+  min-width: 0;
+}
+.todo-list-pane,
+.todo-thought-pane,
+.memo-list-pane,
+.memo-editor-pane {
+  min-width: 0;
+}
+.todo-list-pane,
+.memo-list-pane {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+.todo-list-pane .todo-list,
+.memo-list-pane .memo-list {
+  min-height: 0;
+  max-height: clamp(270px, 48vh, 460px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.todo-thought-pane,
+.memo-editor-pane {
+  min-height: clamp(470px, 58vh, 680px);
+}
+.todo-thought-pane {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.todo-thought-pane .notes-divider {
+  margin-top: 16px;
+}
+.todo-thought-pane .todo-thought-list {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.memo-workspace {
   min-height: clamp(560px, 62vh, 760px);
+}
+.memo-editor-pane {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.memo-panel {
   display: flex;
   flex-direction: column;
 }
@@ -2409,7 +2474,8 @@ textarea::placeholder {
   min-height: 390px;
   display: flex;
   flex-direction: column;
-  margin-top: 18px;
+  height: 100%;
+  margin-top: 0;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.36);
 }
@@ -2502,6 +2568,24 @@ textarea::placeholder {
   }
   .memo-list {
     max-height: none;
+  }
+  .todo-workspace,
+  .memo-workspace {
+    display: block;
+    min-height: 0;
+  }
+  .todo-thought-pane,
+  .memo-editor-pane {
+    min-height: 0;
+  }
+  .todo-thought-pane {
+    margin-top: 28px;
+  }
+  .todo-thought-pane .todo-thought-list {
+    overflow-y: visible;
+  }
+  .memo-editor-pane {
+    margin-top: 18px;
   }
   .memo-panel {
     min-height: 0;
