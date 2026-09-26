@@ -28,6 +28,77 @@ body {
   min-width: 320px;
   background: #f8f7f3;
 }
+.floating-timer-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #d9e8e1;
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 12px 28px rgba(73, 101, 97, 0.16);
+  user-select: none;
+}
+.floating-timer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 35px;
+  padding: 0 10px 0 13px;
+  border-bottom: 1px solid var(--line);
+  -webkit-app-region: drag;
+  color: var(--muted);
+  font-size: 10px;
+}
+.floating-timer-header span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.floating-timer-header i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mint);
+}
+.floating-timer-header button {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  -webkit-app-region: no-drag;
+}
+.floating-timer-header button:hover {
+  background: #fff0ef;
+  color: var(--red-dark);
+}
+.floating-timer-content {
+  flex: 1;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 5px;
+  padding: 13px 15px 15px;
+}
+.floating-timer-content strong {
+  color: var(--ink);
+  font:
+    500 clamp(32px, 13vw, 52px) "DM Mono",
+    monospace;
+  line-height: 1;
+}
+.floating-timer-content span {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 button,
 input,
 textarea {

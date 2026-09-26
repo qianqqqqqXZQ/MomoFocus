@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain, Notification } = require("electron");
 const path = require("node:path");
 
+let mainWindow = null;
+let floatingWindow = null;
+
 app.setAppUserModelId("com.momofocus.app");
 
 ipcMain.handle("momofocus:notify", (_event, payload) => {
@@ -14,6 +17,60 @@ ipcMain.handle("momofocus:notify", (_event, payload) => {
     title: payload.title,
     body: typeof payload.body === "string" ? payload.body : "",
   }).show();
+  return true;
+});
+
+function closeFloatingWindow() {
+  if (floatingWindow && !floatingWindow.isDestroyed()) floatingWindow.close();
+  floatingWindow = null;
+}
+
+ipcMain.handle("momofocus:open-floating-window", () => {
+  if (floatingWindow && !floatingWindow.isDestroyed()) {
+    floatingWindow.show();
+    floatingWindow.focus();
+    return true;
+  }
+
+  const iconPath = path.join(app.getAppPath(), "assets", "tomato.ico");
+  floatingWindow = new BrowserWindow({
+    width: 300,
+    height: 174,
+    minWidth: 260,
+    minHeight: 150,
+    maxWidth: 420,
+    maxHeight: 240,
+    title: "番茄小窝 · 专注浮窗",
+    icon: iconPath,
+    alwaysOnTop: true,
+    resizable: true,
+    frame: false,
+    transparent: false,
+    autoHideMenuBar: true,
+    parent: mainWindow ?? undefined,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, "preload.cjs"),
+    },
+  });
+
+  floatingWindow.on("closed", () => {
+    floatingWindow = null;
+  });
+
+  if (isDevelopment) {
+    floatingWindow.loadURL(`${developmentUrl}/?floating=1`);
+  } else {
+    floatingWindow.loadFile(path.join(__dirname, "..", "dist", "index.html"), {
+      query: { floating: "1" },
+    });
+  }
+  return true;
+});
+
+ipcMain.handle("momofocus:close-floating-window", () => {
+  closeFloatingWindow();
   return true;
 });
 
@@ -38,12 +95,18 @@ function createWindow() {
       preload: path.join(__dirname, "preload.cjs"),
     },
   });
+  mainWindow = window;
 
   if (isDevelopment) {
     window.loadURL(developmentUrl);
   } else {
     window.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }
+
+  window.on("closed", () => {
+    if (mainWindow === window) mainWindow = null;
+    closeFloatingWindow();
+  });
 }
 
 app.whenReady().then(() => {

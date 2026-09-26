@@ -80,7 +80,11 @@ type TimerSnapshot = {
   completedPending: boolean;
   sessionStartedAt?: number | null;
 };
-type AppSettings = { soundOn: boolean; notificationsOn: boolean };
+type AppSettings = {
+  soundOn: boolean;
+  notificationsOn: boolean;
+  floatingWindowOn?: boolean;
+};
 
 const MODES: Record<
   Mode,
@@ -241,7 +245,9 @@ const isSettings = (value: unknown): value is AppSettings =>
     value &&
     typeof value === "object" &&
     typeof (value as AppSettings).soundOn === "boolean" &&
-    typeof (value as AppSettings).notificationsOn === "boolean",
+    typeof (value as AppSettings).notificationsOn === "boolean" &&
+    ((value as AppSettings).floatingWindowOn === undefined ||
+      typeof (value as AppSettings).floatingWindowOn === "boolean"),
   );
 const formatTime = (seconds: number) =>
   `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, "0")}:${String(Math.max(0, seconds) % 60).padStart(2, "0")}`;
@@ -264,6 +270,81 @@ const startOfWeek = (date: Date) => {
   copy.setHours(0, 0, 0, 0);
   return copy;
 };
+
+function FloatingTimer() {
+  const [snapshot, setSnapshot] = useState<TimerSnapshot | null>(() =>
+    readStorage<TimerSnapshot | null>(
+      STORAGE_KEYS.timer,
+      null,
+      (value) => value === null || isTimerSnapshot(value),
+    ),
+  );
+  const [taskName, setTaskName] = useState("专注任务");
+  const [tasks, setTasks] = useState<FocusTask[]>([]);
+
+  useEffect(() => {
+    const sync = () => {
+      const nextSnapshot = readStorage<TimerSnapshot | null>(
+        STORAGE_KEYS.timer,
+        null,
+        (value): value is TimerSnapshot | null =>
+          value === null || isTimerSnapshot(value),
+      );
+      const nextTasks = readStorage(STORAGE_KEYS.tasks, [], isFocusTaskArray);
+      setSnapshot(nextSnapshot);
+      setTasks(nextTasks);
+      const task = nextTasks.find((item) => item.id === nextSnapshot?.taskId);
+      setTaskName(task?.text ?? "专注任务");
+    };
+    sync();
+    const interval = window.setInterval(sync, 500);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const task = tasks.find((item) => item.id === snapshot?.taskId);
+  const liveSeconds = snapshot
+    ? task?.type === "countup"
+      ? snapshot.startValue +
+        (snapshot.isRunning && snapshot.startedAt
+          ? Math.floor((Date.now() - snapshot.startedAt) / 1000)
+          : 0)
+      : snapshot.isRunning && snapshot.startedAt
+        ? Math.max(
+            0,
+            Math.ceil(
+              (snapshot.startedAt + snapshot.startValue * 1000 - Date.now()) /
+                1000,
+            ),
+          )
+        : snapshot.remaining
+    : 0;
+
+  return (
+    <main className="floating-timer-shell">
+      <header className="floating-timer-header">
+        <span>
+          <i />
+          {snapshot?.isRunning ? "正在专注" : "计时已暂停"}
+        </span>
+        <button
+          aria-label="关闭浮窗"
+          title="关闭浮窗"
+          onClick={() => void window.momoFocusNative?.closeFloatingWindow()}
+        >
+          <X size={15} />
+        </button>
+      </header>
+      <section className="floating-timer-content">
+        <strong>{formatTime(liveSeconds)}</strong>
+        <span>{snapshot?.mode === "short" ? "休息中" : taskName}</span>
+      </section>
+    </main>
+  );
+}
 
 function TomatoIcon() {
   return (
@@ -294,6 +375,14 @@ function TomatoIcon() {
 }
 
 function App() {
+  return new URLSearchParams(window.location.search).has("floating") ? (
+    <FloatingTimer />
+  ) : (
+    <MainApp />
+  );
+}
+
+function MainApp() {
   const [view, setView] = useState<View>("timer");
   const [slogan, setSlogan] = useState(() =>
     readStorage(
@@ -364,6 +453,14 @@ function App() {
         isSettings,
       ).notificationsOn,
   );
+  const [floatingWindowOn, setFloatingWindowOn] = useState(
+    () =>
+      readStorage(
+        STORAGE_KEYS.settings,
+        { soundOn: true, notificationsOn: true, floatingWindowOn: true },
+        isSettings,
+      ).floatingWindowOn ?? true,
+  );
   const [showSoundTip, setShowSoundTip] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
@@ -416,8 +513,12 @@ function App() {
     writeStorage(STORAGE_KEYS.quickNotes, notes);
   }, [notes]);
   useEffect(() => {
-    writeStorage(STORAGE_KEYS.settings, { soundOn, notificationsOn });
-  }, [soundOn, notificationsOn]);
+    writeStorage(STORAGE_KEYS.settings, {
+      soundOn,
+      notificationsOn,
+      floatingWindowOn,
+    });
+  }, [floatingWindowOn, notificationsOn, soundOn]);
   useEffect(() => {
     writeStorage(STORAGE_KEYS.slogan, slogan);
   }, [slogan]);
@@ -583,9 +684,18 @@ function App() {
     startValueRef.current = isCountup ? elapsed : remaining;
     setCompletionMessage("");
     setIsRunning(true);
+    if (floatingWindowOn) void window.momoFocusNative?.openFloatingWindow();
     stopTimer();
     timerRef.current = window.setInterval(updateTimer, 250);
-  }, [elapsed, isCountup, remaining, selectedTask, stopTimer, updateTimer]);
+  }, [
+    elapsed,
+    floatingWindowOn,
+    isCountup,
+    remaining,
+    selectedTask,
+    stopTimer,
+    updateTimer,
+  ]);
   useEffect(() => {
     if (!restoringRef.current) return;
     const snapshot = readStorage<TimerSnapshot | null>(
@@ -1106,6 +1216,9 @@ function App() {
               </button>
               <button onClick={() => setNotificationsOn((value) => !value)}>
                 系统通知：{notificationsOn ? "开" : "关"}
+              </button>
+              <button onClick={() => setFloatingWindowOn((value) => !value)}>
+                开始时显示浮窗：{floatingWindowOn ? "开" : "关"}
               </button>
             </div>
           )}

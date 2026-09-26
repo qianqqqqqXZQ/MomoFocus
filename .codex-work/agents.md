@@ -42,6 +42,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 计时快照使用 `momofocus.timer`，按 `Date.now()` 真实时间恢复倒计时和正计时。
 - 快速记录使用 `momofocus.quickNotes`；声音和系统通知设置使用 `momofocus.settings`。
 - Electron 原生通知通过 `electron/preload.cjs` 暴露的受限 `momoFocusNative.notify` API 调用，主窗口保持隔离上下文。
+- 计时开始时可通过 `momofocus.settings.floatingWindowOn` 自动打开 Electron 始终置顶浮窗；浮窗通过 `?floating=1` 路由读取 `momofocus.timer` 和任务数据，每 500ms 刷新，关闭浮窗不停止计时。
 - 正计时启动后持续计时；番茄钟专注结束自动进入休息并开始计时，休息结束停止并完成本轮。快捷键为 `Space`（暂停/继续）、`S` 或 `Escape`（放弃）。
 - 番茄钟专注结束自动播放提示音并开始任务自定义休息；休息结束再次播放提示音并停止。声音由 `momofocus.settings` 的 `soundOn` 控制。
 - 计时快照额外保存 `sessionStartedAt`，用于暂停或重启后保持历史记录的原始日期归属。
@@ -66,6 +67,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-26：将备忘录列表选中指示条从薄荷绿调整为天空蓝，同时保持任务列表选中态不变；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
 - 2026-09-26：扩大备忘录编辑器和正文输入区，桌面端使用可伸展编辑布局，窄屏保留 420px 编辑器和 320px 正文最小高度；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成桌面/窄屏样式 code review。运行态窄屏检查确认正文区域约 338px 可见且页面可继续滚动。
 - 2026-09-26：将 Todo 想法区和备忘录编辑区移到各自列表右侧，桌面端扩展右侧工作区宽度并设置列表独立滚动；中等及窄窗口自动堆叠。`npm run format:check`、`npm run build`、`git diff --check` 通过；运行态确认桌面双栏尺寸和 700px 窄窗口无横向溢出，并完成 code review。
+- 2026-09-26：增加专注开始时自动显示的 Electron 始终置顶浮窗，浮窗可独立关闭；菜单增加“开始时显示浮窗”开关，设置兼容旧数据。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过；运行态因机器已有 `5173` 服务改用 `5174` 启动，Electron 输出缓存权限警告但无脚本加载错误，窗口自动化枚举未捕获窗口。
 
 ## 打包与资源约定
 
