@@ -2318,6 +2318,11 @@ textarea::placeholder {
 .right-panel {
   min-width: 0;
 }
+.memo-panel {
+  min-height: clamp(560px, 62vh, 760px);
+  display: flex;
+  flex-direction: column;
+}
 .view-tabs .task-count {
   margin-left: 2px;
   padding-top: 0;
@@ -2350,7 +2355,7 @@ textarea::placeholder {
 }
 .memo-list {
   border-top: 1px solid var(--line);
-  max-height: 210px;
+  max-height: 250px;
   overflow-y: auto;
 }
 .memo-list-item {
@@ -2401,6 +2406,9 @@ textarea::placeholder {
   white-space: nowrap;
 }
 .memo-editor {
+  min-height: 390px;
+  display: flex;
+  flex-direction: column;
   margin-top: 18px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.36);
@@ -2439,7 +2447,8 @@ textarea::placeholder {
   font-weight: 700;
 }
 .memo-body-input {
-  min-height: 156px;
+  flex: 1;
+  min-height: 300px;
   padding: 5px 15px 15px;
   resize: vertical;
   font-size: 12px;
@@ -2493,6 +2502,15 @@ textarea::placeholder {
   }
   .memo-list {
     max-height: none;
+  }
+  .memo-panel {
+    min-height: 0;
+  }
+  .memo-editor {
+    min-height: 420px;
+  }
+  .memo-body-input {
+    min-height: 320px;
   }
   .memo-title-input {
     font-size: 17px;
