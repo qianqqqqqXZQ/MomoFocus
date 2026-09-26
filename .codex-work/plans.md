@@ -136,3 +136,10 @@
 - [x] 创建任务时保存所选颜色，并在取消或完成后重置表单状态。
 - [x] 运行 `npm run format:check`、`npm run build` 和 `git diff --check`。
 - [x] 完成改动后的代码复核。
+
+## 备忘录选中态配色
+
+- [x] 将备忘录列表选中指示条从薄荷绿调整为天空蓝。
+- [x] 保持任务列表选中态继续使用薄荷绿。
+- [x] 运行 `npm run format:check`、`npm run build` 和 `git diff --check`。
+- [x] 完成改动后的代码复核。

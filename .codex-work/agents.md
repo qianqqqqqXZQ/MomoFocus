@@ -62,6 +62,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-25：修正任务入口配色，任务列表“开始”文字改为黑色，“新建专注任务”按钮移除绿色背景并改为透明底色；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
 - 2026-09-25：将首页“慢一点，也很好。”的悬停色改为深薄荷绿，并让两行同步变色；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
 - 2026-09-25：新建专注任务时增加颜色选择并保存所选预设；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
+- 2026-09-26：将备忘录列表选中指示条从薄荷绿调整为天空蓝，同时保持任务列表选中态不变；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
 
 ## 打包与资源约定
 

@@ -2638,9 +2638,11 @@ textarea::placeholder {
 .memo-list-item.active {
   background: #f5faf8;
 }
-.task-row.is-selected,
-.memo-list-item.active {
+.task-row.is-selected {
   box-shadow: inset 3px 0 0 var(--mint);
+}
+.memo-list-item.active {
+  box-shadow: inset 3px 0 0 var(--sky);
 }
 .check-button.is-checked {
   background: var(--mint);
