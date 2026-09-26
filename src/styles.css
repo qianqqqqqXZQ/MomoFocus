@@ -29,75 +29,147 @@ body {
   background: #f8f7f3;
 }
 .floating-timer-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid #d9e8e1;
-  border-radius: 14px;
-  background: var(--paper);
-  color: var(--ink);
-  box-shadow: 0 12px 28px rgba(73, 101, 97, 0.16);
-  user-select: none;
-}
-.floating-timer-header {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 35px;
-  padding: 0 10px 0 13px;
-  border-bottom: 1px solid var(--line);
+  gap: 8px;
+  overflow: hidden;
+  border-radius: 39px;
+  background: transparent;
+  color: var(--ink);
+  user-select: none;
   -webkit-app-region: drag;
+}
+.floating-timer-orb {
+  position: relative;
+  flex: 0 0 78px;
+  width: 78px;
+  height: 78px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 7px 19px rgba(73, 101, 97, 0.2);
+  -webkit-app-region: no-drag;
+}
+.floating-timer-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.floating-timer-ring-track,
+.floating-timer-ring-progress {
+  fill: none;
+  stroke-width: 4;
+}
+.floating-timer-ring-track {
+  stroke: #e5eee9;
+}
+.floating-timer-ring-progress {
+  stroke: #9bcfbd;
+  stroke-linecap: round;
+  transition:
+    stroke-dashoffset 0.35s linear,
+    stroke 0.2s;
+}
+.floating-timer-ring-progress:not(.is-running) {
+  stroke: #c4d8ce;
+}
+.floating-timer-tomato {
+  position: absolute;
+  inset: 17px;
+  display: grid;
+  place-items: center;
+  color: var(--red);
+  pointer-events: none;
+}
+.floating-timer-tomato .tomato-icon {
+  width: 100%;
+  height: 100%;
+}
+.floating-timer-details {
+  min-width: 0;
+  width: 226px;
+  display: grid;
+  gap: 2px;
+  padding: 10px 13px 10px 2px;
+  opacity: 0;
+  transform: translateX(-7px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+  pointer-events: none;
+  -webkit-app-region: no-drag;
+}
+.floating-timer-shell.is-expanded .floating-timer-details {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+.floating-timer-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   color: var(--muted);
   font-size: 10px;
 }
-.floating-timer-header span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.floating-timer-header i {
+.floating-timer-status i {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--mint);
 }
-.floating-timer-header button {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--muted);
-  -webkit-app-region: no-drag;
-}
-.floating-timer-header button:hover {
-  background: #fff0ef;
-  color: var(--red-dark);
-}
-.floating-timer-content {
-  flex: 1;
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 5px;
-  padding: 13px 15px 15px;
-}
-.floating-timer-content strong {
+.floating-timer-details strong {
   color: var(--ink);
   font:
-    500 clamp(32px, 13vw, 52px) "DM Mono",
+    500 28px "DM Mono",
     monospace;
   line-height: 1;
 }
-.floating-timer-content span {
+.floating-timer-task {
   max-width: 100%;
   overflow: hidden;
   color: var(--muted);
   font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.floating-timer-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 5px;
+}
+.floating-timer-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 27px;
+  padding: 0 8px;
+  border: 1px solid #d6e7df;
+  border-radius: 7px;
+  background: #f2f9f5;
+  color: #6d9c86;
+  font-size: 10px;
+  -webkit-app-region: no-drag;
+}
+.floating-timer-actions button:hover {
+  border-color: var(--mint);
+  background: #e5f3ec;
+  color: #527e69;
+}
+.floating-timer-actions .floating-timer-abandon {
+  border-color: #f0d3d1;
+  background: #fff5f3;
+  color: #be7b7f;
+}
+.floating-timer-actions .floating-timer-abandon:hover {
+  border-color: #e8b9b7;
+  background: #ffebe9;
+  color: #a9666c;
 }
 button,
 input,
@@ -2325,6 +2397,32 @@ textarea::placeholder {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.history-delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin-left: 2px;
+  border-radius: 5px;
+  background: transparent;
+  color: #b8b1a7;
+  opacity: 0;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    opacity 0.2s;
+}
+.session-list > div:hover .history-delete-button,
+.history-delete-button:focus-visible {
+  opacity: 1;
+}
+.history-delete-button:hover,
+.history-delete-button:focus-visible {
+  background: #fff0ef;
+  color: var(--red-dark);
+}
 .session-dot {
   width: 5px;
   height: 5px;
@@ -2342,7 +2440,28 @@ textarea::placeholder {
   margin-top: 0;
 }
 .todo-add {
+  display: flex;
+  align-items: center;
   margin-top: 0;
+}
+.todo-save-button {
+  flex: 0 0 auto;
+  min-width: 48px;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--red-dark);
+  font-size: 11px;
+  font-weight: 700;
+  background: transparent;
+}
+.todo-save-button:hover:not(:disabled) {
+  border-color: var(--red-light);
+  background: var(--red-light);
+}
+.todo-save-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 .focus-history {
   margin-top: 34px;

@@ -6,7 +6,6 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
-  ChevronDown,
   Clock3,
   Coffee,
   FileText,
@@ -281,6 +280,7 @@ function FloatingTimer() {
   );
   const [taskName, setTaskName] = useState("专注任务");
   const [tasks, setTasks] = useState<FocusTask[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     const sync = () => {
@@ -322,25 +322,94 @@ function FloatingTimer() {
           )
         : snapshot.remaining
     : 0;
+  const isCountup = task?.type === "countup";
+  const totalSeconds =
+    (isCountup
+      ? (task?.focusMinutes ?? DEFAULT_FOCUS_MINUTES)
+      : snapshot?.mode === "focus"
+        ? (task?.focusMinutes ?? DEFAULT_FOCUS_MINUTES)
+        : (task?.breakMinutes ?? DEFAULT_BREAK_MINUTES)) * 60;
+  const progress = isCountup
+    ? Math.min(1, liveSeconds / totalSeconds)
+    : Math.min(1, Math.max(0, 1 - liveSeconds / totalSeconds));
+  const isRunning = Boolean(snapshot?.isRunning);
+  const statusLabel = snapshot?.mode === "short" ? "休息中" : "专注中";
+  const setExpanded = (expanded: boolean) => {
+    setIsExpanded(expanded);
+    void (expanded
+      ? window.momoFocusNative?.expandFloatingWindow()
+      : window.momoFocusNative?.collapseFloatingWindow());
+  };
+  const sendCommand = (command: "toggleTimer" | "abandonTask") => {
+    window.momoFocusNative?.floatingCommand(command);
+  };
+  const circumference = 2 * Math.PI * 31;
 
   return (
-    <main className="floating-timer-shell">
-      <header className="floating-timer-header">
-        <span>
-          <i />
-          {snapshot?.isRunning ? "正在专注" : "计时已暂停"}
+    <main
+      className={`floating-timer-shell ${isExpanded ? "is-expanded" : ""}`}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+    >
+      <button
+        className="floating-timer-orb"
+        aria-label={isRunning ? "暂停计时" : "继续计时"}
+        title={isRunning ? "暂停计时" : "继续计时"}
+        onClick={() => sendCommand("toggleTimer")}
+      >
+        <svg className="floating-timer-ring" viewBox="0 0 78 78">
+          <circle
+            className="floating-timer-ring-track"
+            cx="39"
+            cy="39"
+            r="31"
+          />
+          <circle
+            className={`floating-timer-ring-progress ${isRunning ? "is-running" : ""}`}
+            cx="39"
+            cy="39"
+            r="31"
+            style={{
+              strokeDasharray: circumference,
+              strokeDashoffset: circumference * (1 - progress),
+            }}
+          />
+        </svg>
+        <span className="floating-timer-tomato">
+          <TomatoIcon />
         </span>
-        <button
-          aria-label="关闭浮窗"
-          title="关闭浮窗"
-          onClick={() => void window.momoFocusNative?.closeFloatingWindow()}
-        >
-          <X size={15} />
-        </button>
-      </header>
-      <section className="floating-timer-content">
+      </button>
+      <section className="floating-timer-details">
+        <div className="floating-timer-status">
+          <i />
+          <span>{isRunning ? statusLabel : "已暂停"}</span>
+        </div>
         <strong>{formatTime(liveSeconds)}</strong>
-        <span>{snapshot?.mode === "short" ? "休息中" : taskName}</span>
+        <span className="floating-timer-task" title={taskName}>
+          {taskName}
+        </span>
+        <div className="floating-timer-actions">
+          <button
+            type="button"
+            onClick={() => sendCommand("toggleTimer")}
+            title={isRunning ? "暂停" : "继续"}
+          >
+            {isRunning ? (
+              <Pause size={14} />
+            ) : (
+              <Play size={14} fill="currentColor" />
+            )}
+            {isRunning ? "暂停" : "继续"}
+          </button>
+          <button
+            type="button"
+            className="floating-timer-abandon"
+            onClick={() => sendCommand("abandonTask")}
+          >
+            <X size={14} />
+            关闭任务
+          </button>
+        </div>
       </section>
     </main>
   );
@@ -541,6 +610,9 @@ function MainApp() {
     if (timerRef.current) window.clearInterval(timerRef.current);
     timerRef.current = null;
   }, []);
+  const closeFloatingWindow = useCallback(() => {
+    void window.momoFocusNative?.closeFloatingWindow();
+  }, []);
   const notifyUser = useCallback(
     (title: string, body: string) => {
       if (notificationsOn) void window.momoFocusNative?.notify({ title, body });
@@ -643,7 +715,9 @@ function MainApp() {
     setRemaining(0);
     setCompletionMessage("番茄钟完成");
     notifyUser("番茄钟完成", "专注和休息都已完成。");
+    closeFloatingWindow();
   }, [
+    closeFloatingWindow,
     breakMinutes,
     getCurrentPhaseSeconds,
     isCountup,
@@ -778,7 +852,17 @@ function MainApp() {
     setSelectedTaskId(null);
     setElapsed(0);
     setCompletionMessage("");
+    closeFloatingWindow();
   };
+  useEffect(() => {
+    const removeListener = window.momoFocusNative?.onFloatingCommand(
+      (command) => {
+        if (command === "toggleTimer") toggleTimer();
+        else abandonTask();
+      },
+    );
+    return removeListener;
+  }, [abandonTask, toggleTimer]);
   const openTaskDetails = (task: FocusTask) => {
     setTaskDetailsId(task.id);
     setTaskEditText(task.text);
@@ -887,6 +971,9 @@ function MainApp() {
     setTasks((items) => items.filter((task) => task.id !== taskInDetails.id));
     setTaskDetailsId(null);
     setConfirmingTaskDelete(false);
+  };
+  const deleteSession = (sessionId: number) => {
+    setSessions((items) => items.filter((session) => session.id !== sessionId));
   };
   const addTask = () => {
     const text = taskInput.trim();
@@ -1001,7 +1088,6 @@ function MainApp() {
                         · {formatDuration(task.focusSeconds)}
                       </small>
                     </span>
-                    <ChevronDown size={15} />
                   </button>
                   <button
                     className="central-task-start"
@@ -1131,7 +1217,9 @@ function MainApp() {
           </button>
         )}
       </div>
-      {sessions.length > 0 && <FocusHistory sessions={sessions} />}
+      {sessions.length > 0 && (
+        <FocusHistory sessions={sessions} onDelete={deleteSession} />
+      )}
     </div>
   );
 
@@ -1260,6 +1348,7 @@ function MainApp() {
             toggleTimer,
             abandonTask,
             sessions,
+            deleteSession,
             setView,
             slogan,
             setSlogan,
@@ -1578,6 +1667,7 @@ type TimerViewProps = {
   toggleTimer: () => void;
   abandonTask: () => void;
   sessions: FocusSession[];
+  deleteSession: (sessionId: number) => void;
   setView: (view: View) => void;
   slogan: string;
   setSlogan: Dispatch<SetStateAction<string>>;
@@ -1617,6 +1707,7 @@ function TimerView(props: TimerViewProps) {
     toggleTimer,
     abandonTask,
     sessions,
+    deleteSession,
     setView,
     slogan,
     setSlogan,
@@ -1807,7 +1898,7 @@ function TimerView(props: TimerViewProps) {
                     放弃
                   </button>
                 </div>
-                <FocusHistory sessions={sessions} />
+                <FocusHistory sessions={sessions} onDelete={deleteSession} />
               </>
             ) : (
               renderTaskEntry()
@@ -2133,6 +2224,14 @@ function RightPanel({
                 placeholder="添加一件待办"
                 aria-label="添加一件待办"
               />
+              <button
+                className="todo-save-button"
+                type="button"
+                onClick={addTodo}
+                disabled={!todoInput.trim()}
+              >
+                保存
+              </button>
             </div>
           </div>
           <div className="todo-thought-pane">
@@ -2262,7 +2361,13 @@ function RightPanel({
   );
 }
 
-function FocusHistory({ sessions }: { sessions: FocusSession[] }) {
+function FocusHistory({
+  sessions,
+  onDelete,
+}: {
+  sessions: FocusSession[];
+  onDelete: (sessionId: number) => void;
+}) {
   return (
     <div className="focus-history">
       <div className="history-heading">
@@ -2281,6 +2386,15 @@ function FocusHistory({ sessions }: { sessions: FocusSession[] }) {
               <i className="session-dot" />
               <b>{session.taskName}</b>
               <span>{formatDuration(session.seconds)}</span>
+              <button
+                className="history-delete-button"
+                type="button"
+                aria-label={`删除 ${session.taskName} 的专注记录`}
+                title="删除这条记录"
+                onClick={() => onDelete(session.id)}
+              >
+                <Trash2 size={13} />
+              </button>
             </div>
           </div>
         ))

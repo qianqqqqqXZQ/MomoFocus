@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, Notification } = require("electron");
 const path = require("node:path");
 
 let mainWindow = null;
@@ -25,6 +25,16 @@ function closeFloatingWindow() {
   floatingWindow = null;
 }
 
+function resizeFloatingWindow(expanded) {
+  if (!floatingWindow || floatingWindow.isDestroyed()) return false;
+  const { x, y } = floatingWindow.getBounds();
+  floatingWindow.setBounds(
+    { x, y, width: expanded ? 320 : 78, height: 78 },
+    false,
+  );
+  return true;
+}
+
 ipcMain.handle("momofocus:open-floating-window", () => {
   if (floatingWindow && !floatingWindow.isDestroyed()) {
     floatingWindow.show();
@@ -34,18 +44,19 @@ ipcMain.handle("momofocus:open-floating-window", () => {
 
   const iconPath = path.join(app.getAppPath(), "assets", "tomato.ico");
   floatingWindow = new BrowserWindow({
-    width: 300,
-    height: 174,
-    minWidth: 260,
-    minHeight: 150,
-    maxWidth: 420,
-    maxHeight: 240,
+    width: 78,
+    height: 78,
+    minWidth: 78,
+    minHeight: 78,
+    maxWidth: 320,
+    maxHeight: 78,
     title: "番茄小窝 · 专注浮窗",
     icon: iconPath,
     alwaysOnTop: true,
     resizable: true,
     frame: false,
-    transparent: false,
+    transparent: true,
+    backgroundColor: "#00000000",
     autoHideMenuBar: true,
     parent: mainWindow ?? undefined,
     webPreferences: {
@@ -58,6 +69,16 @@ ipcMain.handle("momofocus:open-floating-window", () => {
   floatingWindow.on("closed", () => {
     floatingWindow = null;
   });
+  floatingWindow.webContents.on("context-menu", (event) => {
+    event.preventDefault();
+    if (!floatingWindow || floatingWindow.isDestroyed()) return;
+    Menu.buildFromTemplate([
+      {
+        label: "关闭浮窗",
+        click: () => closeFloatingWindow(),
+      },
+    ]).popup({ window: floatingWindow });
+  });
 
   if (isDevelopment) {
     floatingWindow.loadURL(`${developmentUrl}/?floating=1`);
@@ -67,6 +88,24 @@ ipcMain.handle("momofocus:open-floating-window", () => {
     });
   }
   return true;
+});
+
+ipcMain.handle("momofocus:expand-floating-window", () =>
+  resizeFloatingWindow(true),
+);
+
+ipcMain.handle("momofocus:collapse-floating-window", () =>
+  resizeFloatingWindow(false),
+);
+
+ipcMain.on("momofocus:floating-command", (_event, command) => {
+  if (
+    (command !== "toggleTimer" && command !== "abandonTask") ||
+    !mainWindow ||
+    mainWindow.isDestroyed()
+  )
+    return;
+  mainWindow.webContents.send("momofocus:floating-command", command);
 });
 
 ipcMain.handle("momofocus:close-floating-window", () => {
