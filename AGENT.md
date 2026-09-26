@@ -67,6 +67,68 @@ git diff --check
 7. commit 成功后执行 `git push`，并确认 push 结果。
 8. 如果 push 失败，保留本地 commit，报告具体原因；不得为了绕过检查使用 `--force`。
 
+## Commit 命名规范
+
+所有 commit message 必须使用 Conventional Commits 格式：
+
+```text
+<type>(<scope>): <description>
+```
+
+允许的 `type`：
+
+- `feat`：新增功能
+- `fix`：修复缺陷
+- `refactor`：重构，不改变外部行为
+- `perf`：性能优化
+- `style`：不影响逻辑的格式或样式修改
+- `docs`：文档修改
+- `test`：测试相关修改
+- `build`：构建系统或依赖修改
+- `ci`：CI/CD 配置修改
+- `chore`：其他维护性修改
+- `revert`：回退之前的提交
+
+命名要求：
+
+1. `type` 必须使用小写英文。
+2. `scope` 可选，使用影响范围，例如 `ui`、`timer`、`electron`、`ios` 或 `docs`。
+3. `description` 使用祈使语气，简短描述实际变更，不要以句号结尾。
+4. 一次 commit 只表达一个逻辑变更。
+5. 不得使用 `update`、`fix bug`、`final`、`完成` 等无法说明具体内容的描述。
+6. 默认不要在 commit message 中加入个人姓名、AI 标记或无关内容。
+7. 破坏性变更在 header 末尾添加 `!`，例如 `feat(timer)!: change focus completion behavior`。
+
+推荐示例：
+
+```text
+feat(timer): add custom focus duration
+fix(stats): correct cross-midnight session grouping
+refactor(ui): split task detail modal
+docs: document agent workflow
+build: update electron-builder
+style(ui): adjust memo selected color
+```
+
+不合格示例：
+
+```text
+update
+fix bug
+修改完成
+final version
+feat: add feature.
+```
+
+commit 前确认暂存区内容和命名都符合规范：
+
+```powershell
+git diff --cached --check
+git diff --cached --stat
+git diff --cached
+git commit -m "<符合规范的 commit message>"
+```
+
 ## Push 安全边界
 
 - 默认只 push 当前分支对应的远程分支。
