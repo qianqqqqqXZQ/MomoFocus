@@ -12,5 +12,8 @@ interface Window {
     floatingCommand: (
       command: "toggleTimer" | "abandonTask",
     ) => Promise<boolean>;
+    startFloatingDrag: (screenX: number, screenY: number) => void;
+    moveFloatingDrag: (screenX: number, screenY: number) => void;
+    endFloatingDrag: () => void;
   };
 }

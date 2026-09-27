@@ -84,6 +84,11 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-27：修复圆形浮窗页面继承全局背景和 `min-width` 导致的外部矩形；浮窗页面现在使用透明 html/body/root 和 78px 收起尺寸，展开时同步调整页面与原生窗口宽度。浮窗控制改为受来源校验的 IPC invoke，主窗口监听只注册一次。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过，并完成代码复核。
 - 2026-09-27：二次修复浮窗仍显示矩形的问题：在 React 挂载前应用透明 class，Electron 使用 content size、关闭原生阴影，并在重复打开时强制恢复 78px 收起尺寸。浏览器计算样式验证 html/body/root/shell 均为 78px、透明背景；`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过，并完成代码复核。
 - 2026-09-27：优化浮窗展开排版与交互：展开宽度调整为 360px，使用温暖米白/粉色面板、清晰字号和按钮间距；离开浮窗延迟 280ms 收起，避免移动到右侧内容时误收起；番茄主体改为 Electron 原生拖动区域。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过，并完成代码复核。
+- 2026-09-27：修复番茄主体使用 CSS 原生拖动导致 React 悬停事件失效的问题；番茄恢复普通鼠标事件，自定义拖动通过受来源校验的主进程 IPC 执行，按住可移动，未移动的点击仍暂停/继续。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过，并完成代码复核。
+
+## 最近验证补充
+
+- 2026-09-27：进一步修复浮窗悬停不展开：将进入监听直接绑定到番茄和展开详情区，并取消浮窗 body 的原生拖动区域；番茄仍通过自定义指针事件和主进程 IPC 拖动，点击暂停/继续保持不变。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过。Windows UI 自动化运行态检查因 `@oai/sky` RPC 未配置未执行。
 
 ## 打包与资源约定
 

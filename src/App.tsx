@@ -282,6 +282,41 @@ function FloatingTimer() {
   const [tasks, setTasks] = useState<FocusTask[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const collapseTimerRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragMovedRef = useRef(false);
+
+  const handleOrbPointerDown = (
+    event: React.PointerEvent<HTMLButtonElement>,
+  ) => {
+    if (event.button !== 0) return;
+    isDraggingRef.current = true;
+    dragMovedRef.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    window.momoFocusNative?.startFloatingDrag(event.screenX, event.screenY);
+  };
+  const handleOrbPointerMove = (
+    event: React.PointerEvent<HTMLButtonElement>,
+  ) => {
+    if (!isDraggingRef.current) return;
+    if (Math.abs(event.movementX) > 1 || Math.abs(event.movementY) > 1)
+      dragMovedRef.current = true;
+    window.momoFocusNative?.moveFloatingDrag(event.screenX, event.screenY);
+  };
+  const handleOrbPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    window.momoFocusNative?.endFloatingDrag();
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+  const handleOrbClick = () => {
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false;
+      return;
+    }
+    sendCommand("toggleTimer");
+  };
 
   useEffect(() => {
     document.documentElement.classList.add("floating-window");
@@ -383,7 +418,12 @@ function FloatingTimer() {
         className="floating-timer-orb"
         aria-label={isRunning ? "暂停计时" : "继续计时"}
         title={isRunning ? "暂停计时" : "继续计时"}
-        onClick={() => sendCommand("toggleTimer")}
+        onClick={handleOrbClick}
+        onPointerDown={handleOrbPointerDown}
+        onPointerMove={handleOrbPointerMove}
+        onPointerUp={handleOrbPointerUp}
+        onPointerCancel={handleOrbPointerUp}
+        onMouseEnter={handleMouseEnter}
       >
         <svg className="floating-timer-ring" viewBox="0 0 78 78">
           <circle
@@ -407,7 +447,10 @@ function FloatingTimer() {
           <TomatoIcon />
         </span>
       </button>
-      <section className="floating-timer-details">
+      <section
+        className="floating-timer-details"
+        onMouseEnter={handleMouseEnter}
+      >
         <div className="floating-timer-status">
           <i />
           <span>{isRunning ? statusLabel : "已暂停"}</span>

@@ -3,6 +3,7 @@ const path = require("node:path");
 
 let mainWindow = null;
 let floatingWindow = null;
+let floatingDrag = null;
 
 app.setAppUserModelId("com.momofocus.app");
 
@@ -23,6 +24,15 @@ ipcMain.handle("momofocus:notify", (_event, payload) => {
 function closeFloatingWindow() {
   if (floatingWindow && !floatingWindow.isDestroyed()) floatingWindow.close();
   floatingWindow = null;
+  floatingDrag = null;
+}
+
+function isFloatingSender(event) {
+  return Boolean(
+    floatingWindow &&
+    !floatingWindow.isDestroyed() &&
+    event.sender === floatingWindow.webContents,
+  );
 }
 
 function resizeFloatingWindow(expanded) {
@@ -103,9 +113,7 @@ ipcMain.handle("momofocus:collapse-floating-window", () =>
 ipcMain.handle("momofocus:floating-command", (event, command) => {
   if (
     (command !== "toggleTimer" && command !== "abandonTask") ||
-    !floatingWindow ||
-    floatingWindow.isDestroyed() ||
-    event.sender !== floatingWindow.webContents ||
+    !isFloatingSender(event) ||
     !mainWindow ||
     mainWindow.isDestroyed()
   ) {
@@ -113,6 +121,41 @@ ipcMain.handle("momofocus:floating-command", (event, command) => {
   }
   mainWindow.webContents.send("momofocus:floating-command", command);
   return true;
+});
+
+ipcMain.on("momofocus:start-floating-drag", (event, point) => {
+  if (
+    !isFloatingSender(event) ||
+    !point ||
+    typeof point.screenX !== "number" ||
+    typeof point.screenY !== "number"
+  )
+    return;
+  const { x, y } = floatingWindow.getBounds();
+  floatingDrag = {
+    offsetX: point.screenX - x,
+    offsetY: point.screenY - y,
+  };
+});
+
+ipcMain.on("momofocus:move-floating-drag", (event, point) => {
+  if (
+    !isFloatingSender(event) ||
+    !floatingDrag ||
+    !point ||
+    typeof point.screenX !== "number" ||
+    typeof point.screenY !== "number"
+  )
+    return;
+  floatingWindow.setPosition(
+    Math.round(point.screenX - floatingDrag.offsetX),
+    Math.round(point.screenY - floatingDrag.offsetY),
+    false,
+  );
+});
+
+ipcMain.on("momofocus:end-floating-drag", (event) => {
+  if (isFloatingSender(event)) floatingDrag = null;
 });
 
 ipcMain.handle("momofocus:close-floating-window", () => {
