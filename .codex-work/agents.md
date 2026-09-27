@@ -81,6 +81,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-26：增加专注开始时自动显示的 Electron 始终置顶浮窗，浮窗可独立关闭；菜单增加“开始时显示浮窗”开关，设置兼容旧数据。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过；运行态因机器已有 `5173` 服务改用 `5174` 启动，Electron 输出缓存权限警告但无脚本加载错误，窗口自动化枚举未捕获窗口。
 - 2026-09-27：Todo 新增区域增加“保存”按钮，保留回车新增；空输入时按钮禁用。`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成浏览器运行态检查和 code review。
 - 2026-09-27：将任务浮窗升级为圆形番茄与绿色环形进度条，悬停向右展开显示时间和暂停/继续、关闭任务操作；增加 Electron 原生右键关闭菜单，浮窗控制复用主窗口 IPC，专注结束进入休息时保持显示，整轮完成或放弃后关闭。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过，并完成代码复核。
+- 2026-09-27：修复圆形浮窗页面继承全局背景和 `min-width` 导致的外部矩形；浮窗页面现在使用透明 html/body/root 和 78px 收起尺寸，展开时同步调整页面与原生窗口宽度。浮窗控制改为受来源校验的 IPC invoke，主窗口监听只注册一次。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过，并完成代码复核。
 
 ## 打包与资源约定
 

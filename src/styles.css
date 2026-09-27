@@ -28,6 +28,40 @@ body {
   min-width: 320px;
   background: #f8f7f3;
 }
+html.floating-window,
+body.floating-window,
+body.floating-window #root {
+  width: 78px;
+  min-width: 78px;
+  max-width: 320px;
+  height: 78px;
+  min-height: 78px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+}
+html.floating-window.floating-expanded,
+body.floating-window.floating-expanded,
+body.floating-window.floating-expanded #root {
+  width: 320px;
+}
+html.floating-window {
+  overflow: hidden;
+}
+body.floating-window {
+  color: transparent;
+}
+body.floating-window #root {
+  display: block;
+}
+body.floating-window .floating-timer-shell {
+  width: 78px;
+  height: 78px;
+}
+body.floating-window .floating-timer-shell.is-expanded {
+  width: 320px;
+}
 .floating-timer-shell {
   width: 100%;
   height: 100%;

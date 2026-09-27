@@ -98,14 +98,19 @@ ipcMain.handle("momofocus:collapse-floating-window", () =>
   resizeFloatingWindow(false),
 );
 
-ipcMain.on("momofocus:floating-command", (_event, command) => {
+ipcMain.handle("momofocus:floating-command", (event, command) => {
   if (
     (command !== "toggleTimer" && command !== "abandonTask") ||
+    !floatingWindow ||
+    floatingWindow.isDestroyed() ||
+    event.sender !== floatingWindow.webContents ||
     !mainWindow ||
     mainWindow.isDestroyed()
-  )
-    return;
+  ) {
+    return false;
+  }
   mainWindow.webContents.send("momofocus:floating-command", command);
+  return true;
 });
 
 ipcMain.handle("momofocus:close-floating-window", () => {

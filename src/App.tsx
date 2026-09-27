@@ -283,6 +283,17 @@ function FloatingTimer() {
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
+    document.documentElement.classList.add("floating-window");
+    document.body.classList.add("floating-window");
+    return () => {
+      document.documentElement.classList.remove("floating-window");
+      document.documentElement.classList.remove("floating-expanded");
+      document.body.classList.remove("floating-window");
+      document.body.classList.remove("floating-expanded");
+    };
+  }, []);
+
+  useEffect(() => {
     const sync = () => {
       const nextSnapshot = readStorage<TimerSnapshot | null>(
         STORAGE_KEYS.timer,
@@ -336,12 +347,14 @@ function FloatingTimer() {
   const statusLabel = snapshot?.mode === "short" ? "休息中" : "专注中";
   const setExpanded = (expanded: boolean) => {
     setIsExpanded(expanded);
+    document.documentElement.classList.toggle("floating-expanded", expanded);
+    document.body.classList.toggle("floating-expanded", expanded);
     void (expanded
       ? window.momoFocusNative?.expandFloatingWindow()
       : window.momoFocusNative?.collapseFloatingWindow());
   };
   const sendCommand = (command: "toggleTimer" | "abandonTask") => {
-    window.momoFocusNative?.floatingCommand(command);
+    void window.momoFocusNative?.floatingCommand(command);
   };
   const circumference = 2 * Math.PI * 31;
 
@@ -539,6 +552,8 @@ function MainApp() {
   const sessionStartedAtRef = useRef<number | null>(null);
   const startValueRef = useRef(0);
   const pendingStartTaskIdRef = useRef<number | null>(null);
+  const toggleTimerRef = useRef<() => void>(() => undefined);
+  const abandonTaskRef = useRef<() => void>(() => undefined);
   const restoringRef = useRef(true);
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
   const taskInDetails = tasks.find((task) => task.id === taskDetailsId) ?? null;
@@ -854,15 +869,17 @@ function MainApp() {
     setCompletionMessage("");
     closeFloatingWindow();
   };
+  toggleTimerRef.current = toggleTimer;
+  abandonTaskRef.current = abandonTask;
   useEffect(() => {
     const removeListener = window.momoFocusNative?.onFloatingCommand(
       (command) => {
-        if (command === "toggleTimer") toggleTimer();
-        else abandonTask();
+        if (command === "toggleTimer") toggleTimerRef.current();
+        else abandonTaskRef.current();
       },
     );
     return removeListener;
-  }, [abandonTask, toggleTimer]);
+  }, []);
   const openTaskDetails = (task: FocusTask) => {
     setTaskDetailsId(task.id);
     setTaskEditText(task.text);

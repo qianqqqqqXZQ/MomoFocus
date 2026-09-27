@@ -9,6 +9,8 @@ interface Window {
     closeFloatingWindow: () => Promise<boolean>;
     expandFloatingWindow: () => Promise<boolean>;
     collapseFloatingWindow: () => Promise<boolean>;
-    floatingCommand: (command: "toggleTimer" | "abandonTask") => void;
+    floatingCommand: (
+      command: "toggleTimer" | "abandonTask",
+    ) => Promise<boolean>;
   };
 }

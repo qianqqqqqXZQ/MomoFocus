@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld("momoFocusNative", {
   collapseFloatingWindow: () =>
     ipcRenderer.invoke("momofocus:collapse-floating-window"),
   floatingCommand: (command) =>
-    ipcRenderer.send("momofocus:floating-command", command),
+    ipcRenderer.invoke("momofocus:floating-command", command),
   onFloatingCommand: (listener) => {
     const handler = (_event, command) => listener(command);
     ipcRenderer.on("momofocus:floating-command", handler);
