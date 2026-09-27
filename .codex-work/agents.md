@@ -56,7 +56,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 
 ## 最近验证
 
-- 2026-09-27：优化 Todo 列表文字层级，降低主任务字号、对比度和辅助文字存在感；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
+- 2026-09-27：优化 Todo 列表文字层级，降低主任务字号、对比度和辅助文字存在感，并微调中文字体回退栈与字重；`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成针对性 code review。
 
 - 2026-09-27：修正番茄浮窗展开方向，保持收起和展开高度均为 78px，展开尺寸调整为 390×78，只向右显示状态、任务名和操作按钮；`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过，并完成 code review。
 

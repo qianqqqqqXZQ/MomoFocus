@@ -804,10 +804,12 @@ textarea:focus-visible {
 }
 .todo-row .task-text {
   color: #5f625e;
+  font-family:
+    "Nunito Sans", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.55;
-  letter-spacing: 0.1px;
+  letter-spacing: 0;
 }
 .todo-row.is-selected {
   background: rgba(225, 240, 232, 0.52);
