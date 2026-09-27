@@ -802,6 +802,13 @@ textarea:focus-visible {
 .todo-row {
   cursor: pointer;
 }
+.todo-row .task-text {
+  color: #5f625e;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: 0.1px;
+}
 .todo-row.is-selected {
   background: rgba(225, 240, 232, 0.52);
 }
@@ -845,7 +852,7 @@ textarea:focus-visible {
 .task-text small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1.4;
   margin-top: 2px;
   text-decoration: none;

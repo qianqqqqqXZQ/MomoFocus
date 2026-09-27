@@ -1,5 +1,11 @@
 # 当前任务：右侧 Todo / iPhone 风格备忘录切换
 
+## Todo 文字层级优化
+
+- [x] 降低 Todo 主文字字号和视觉对比度，改用更柔和的中等字重。
+- [x] 缩小“想法数量”辅助文字，保持主次层级清晰。
+- [x] 运行格式检查、构建和空白检查，完成针对性 code review。
+
 ## Codex 会话结束 Git 检查
 
 - [x] 增加仓库级 `SessionEnd` hook 配置和 Windows PowerShell 检查脚本。
