@@ -56,6 +56,8 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 
 ## 最近验证
 
+- 2026-09-27：增加仓库级 Codex `SessionEnd` Git 检查 hook 和 `npm run git:session-check`；验证 `hooks.json`、格式检查、`npm run build`、`git diff --check`，并验证未提交改动、无 upstream 和当前待推送状态均能返回退出码 1。hook 只提示，不自动 commit/push。
+
 - 2026-09-27：增加首页专注历史逐条删除入口，删除后同步 `momofocus.sessions` 与统计数据；移除专注任务行右侧 ChevronDown 图标。`npm run format:check`、`npm run build`、`git diff --check` 通过，运行态页面加载成功并完成状态生命周期、兼容性、无障碍和响应式 code review。
 
 - 2026-09-22：`npm run build` 通过。

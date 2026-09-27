@@ -1,0 +1,19 @@
+{
+  "description": "MomoFocus repository session checks.",
+  "hooks": {
+    "SessionEnd": [
+      {
+        "matcher": "other",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$(git rev-parse --show-toplevel)/.codex/hooks/session_end_git_check.ps1\"",
+            "commandWindows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$(git rev-parse --show-toplevel)/.codex/hooks/session_end_git_check.ps1\"",
+            "timeout": 3,
+            "statusMessage": "Checking Git changes and push status"
+          }
+        ]
+      }
+    ]
+  }
+}

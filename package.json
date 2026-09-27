@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "build": "tsc -b && vite build",
+    "git:session-check": "powershell -NoProfile -ExecutionPolicy Bypass -File .codex/hooks/session_end_git_check.ps1",
     "format": "prettier --write \"*.{cjs,json,md,ts}\" \"src/**/*.{ts,tsx,css}\" \"electron/**/*.{cjs,js}\"",
     "format:check": "prettier --check \"*.{cjs,json,md,ts}\" \"src/**/*.{ts,tsx,css}\" \"electron/**/*.{cjs,js}\"",
     "preview": "vite preview",

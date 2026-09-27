@@ -4,7 +4,7 @@
 
 - [x] 增加仓库级 `SessionEnd` hook 配置和 Windows PowerShell 检查脚本。
 - [x] 增加 `npm run git:session-check` 手动兜底命令，检查工作区、upstream 和待推送提交。
-- [ ] 运行格式检查、构建、空白检查和 hook 正常/异常分支验证后完成 code review。
+- [x] 运行格式检查、构建、空白检查和 hook 正常/异常分支验证后完成 code review。
 
 ## 专注历史删除与任务入口简化
 
