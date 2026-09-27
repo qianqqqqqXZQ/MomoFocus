@@ -38,8 +38,9 @@ function isFloatingSender(event) {
 function resizeFloatingWindow(expanded) {
   if (!floatingWindow || floatingWindow.isDestroyed()) return false;
   const { x, y } = floatingWindow.getBounds();
-  const width = expanded ? 360 : 78;
-  floatingWindow.setContentSize(width, 78, false);
+  const width = expanded ? 390 : 78;
+  const height = expanded ? 144 : 78;
+  floatingWindow.setContentSize(width, height, false);
   floatingWindow.setPosition(x, y, false);
   return true;
 }
@@ -58,8 +59,8 @@ ipcMain.handle("momofocus:open-floating-window", () => {
     height: 78,
     minWidth: 78,
     minHeight: 78,
-    maxWidth: 360,
-    maxHeight: 78,
+    maxWidth: 390,
+    maxHeight: 144,
     title: "番茄小窝 · 专注浮窗",
     icon: iconPath,
     alwaysOnTop: true,

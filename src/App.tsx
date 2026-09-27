@@ -451,11 +451,13 @@ function FloatingTimer() {
         className="floating-timer-details"
         onMouseEnter={handleMouseEnter}
       >
-        <div className="floating-timer-status">
-          <i />
-          <span>{isRunning ? statusLabel : "已暂停"}</span>
+        <div className="floating-timer-summary">
+          <div className="floating-timer-status">
+            <i />
+            <span>{isRunning ? statusLabel : "已暂停"}</span>
+          </div>
+          <strong>{formatTime(liveSeconds)}</strong>
         </div>
-        <strong>{formatTime(liveSeconds)}</strong>
         <span className="floating-timer-task" title={taskName}>
           {taskName}
         </span>

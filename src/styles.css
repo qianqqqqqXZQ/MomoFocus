@@ -33,7 +33,7 @@ body.floating-window,
 body.floating-window #root {
   width: 78px;
   min-width: 78px;
-  max-width: 360px;
+  max-width: 390px;
   height: 78px;
   min-height: 78px;
   margin: 0;
@@ -44,7 +44,8 @@ body.floating-window #root {
 html.floating-window.floating-expanded,
 body.floating-window.floating-expanded,
 body.floating-window.floating-expanded #root {
-  width: 360px;
+  width: 390px;
+  height: 144px;
 }
 html.floating-window {
   overflow: hidden;
@@ -61,7 +62,8 @@ body.floating-window .floating-timer-shell {
   height: 78px;
 }
 body.floating-window .floating-timer-shell.is-expanded {
-  width: 360px;
+  width: 390px;
+  height: 144px;
 }
 .floating-timer-shell {
   width: 100%;
@@ -75,6 +77,9 @@ body.floating-window .floating-timer-shell.is-expanded {
   color: var(--ink);
   user-select: none;
   -webkit-app-region: drag;
+  transition:
+    width 0.18s ease,
+    height 0.18s ease;
 }
 .floating-timer-orb {
   position: relative;
@@ -128,10 +133,13 @@ body.floating-window .floating-timer-shell.is-expanded {
 }
 .floating-timer-details {
   min-width: 0;
-  width: 266px;
+  width: 292px;
+  height: 126px;
+  flex: 0 0 292px;
   display: grid;
-  gap: 4px;
-  padding: 11px 14px 11px 5px;
+  grid-template-rows: 34px 20px 34px;
+  gap: 6px;
+  padding: 12px 16px 12px 10px;
   border: 1px solid rgba(240, 211, 198, 0.86);
   border-radius: 18px;
   background: rgba(255, 250, 242, 0.96);
@@ -148,6 +156,12 @@ body.floating-window .floating-timer-shell.is-expanded {
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
+}
+.floating-timer-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
 }
 .floating-timer-status {
   display: flex;
@@ -167,16 +181,17 @@ body.floating-window .floating-timer-shell.is-expanded {
 .floating-timer-details strong {
   color: var(--ink);
   font:
-    500 27px "DM Mono",
+    500 31px "DM Mono",
     monospace;
-  line-height: 1.05;
+  line-height: 1;
 }
 .floating-timer-task {
+  display: block;
   max-width: 100%;
   overflow: hidden;
   color: #756a68;
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -184,19 +199,19 @@ body.floating-window .floating-timer-shell.is-expanded {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 4px;
+  align-items: center;
 }
 .floating-timer-actions button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 29px;
+  min-height: 34px;
   padding: 0 9px;
   border: 1px solid #cfe5d9;
   border-radius: 9px;
   background: #f1f8f3;
   color: #638f79;
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
   -webkit-app-region: no-drag;
 }
