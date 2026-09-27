@@ -45,7 +45,7 @@ html.floating-window.floating-expanded,
 body.floating-window.floating-expanded,
 body.floating-window.floating-expanded #root {
   width: 390px;
-  height: 144px;
+  height: 78px;
 }
 html.floating-window {
   overflow: hidden;
@@ -63,7 +63,7 @@ body.floating-window .floating-timer-shell {
 }
 body.floating-window .floating-timer-shell.is-expanded {
   width: 390px;
-  height: 144px;
+  height: 78px;
 }
 .floating-timer-shell {
   width: 100%;
@@ -77,9 +77,7 @@ body.floating-window .floating-timer-shell.is-expanded {
   color: var(--ink);
   user-select: none;
   -webkit-app-region: drag;
-  transition:
-    width 0.18s ease,
-    height 0.18s ease;
+  transition: width 0.18s ease;
 }
 .floating-timer-orb {
   position: relative;
@@ -134,12 +132,12 @@ body.floating-window .floating-timer-shell.is-expanded {
 .floating-timer-details {
   min-width: 0;
   width: 292px;
-  height: 126px;
+  height: 78px;
   flex: 0 0 292px;
   display: grid;
-  grid-template-rows: 34px 20px 34px;
-  gap: 6px;
-  padding: 12px 16px 12px 10px;
+  grid-template-rows: 16px 16px 24px;
+  gap: 2px;
+  padding: 6px 16px 6px 10px;
   border: 1px solid rgba(240, 211, 198, 0.86);
   border-radius: 18px;
   background: rgba(255, 250, 242, 0.96);
@@ -168,7 +166,7 @@ body.floating-window .floating-timer-shell.is-expanded {
   align-items: center;
   gap: 5px;
   color: #9a8278;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.2;
 }
 .floating-timer-status i {
@@ -181,7 +179,7 @@ body.floating-window .floating-timer-shell.is-expanded {
 .floating-timer-details strong {
   color: var(--ink);
   font:
-    500 31px "DM Mono",
+    500 22px "DM Mono",
     monospace;
   line-height: 1;
 }
@@ -190,8 +188,8 @@ body.floating-window .floating-timer-shell.is-expanded {
   max-width: 100%;
   overflow: hidden;
   color: #756a68;
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 11px;
+  line-height: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -205,13 +203,13 @@ body.floating-window .floating-timer-shell.is-expanded {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 34px;
-  padding: 0 9px;
+  min-height: 24px;
+  padding: 0 8px;
   border: 1px solid #cfe5d9;
   border-radius: 9px;
   background: #f1f8f3;
   color: #638f79;
-  font-size: 12px;
+  font-size: 10px;
   white-space: nowrap;
   -webkit-app-region: no-drag;
 }
