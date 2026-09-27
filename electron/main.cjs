@@ -28,7 +28,7 @@ function closeFloatingWindow() {
 function resizeFloatingWindow(expanded) {
   if (!floatingWindow || floatingWindow.isDestroyed()) return false;
   const { x, y } = floatingWindow.getBounds();
-  const width = expanded ? 320 : 78;
+  const width = expanded ? 360 : 78;
   floatingWindow.setContentSize(width, 78, false);
   floatingWindow.setPosition(x, y, false);
   return true;
@@ -48,7 +48,7 @@ ipcMain.handle("momofocus:open-floating-window", () => {
     height: 78,
     minWidth: 78,
     minHeight: 78,
-    maxWidth: 320,
+    maxWidth: 360,
     maxHeight: 78,
     title: "番茄小窝 · 专注浮窗",
     icon: iconPath,

@@ -281,11 +281,14 @@ function FloatingTimer() {
   const [taskName, setTaskName] = useState("专注任务");
   const [tasks, setTasks] = useState<FocusTask[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
+  const collapseTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.add("floating-window");
     document.body.classList.add("floating-window");
     return () => {
+      if (collapseTimerRef.current)
+        window.clearTimeout(collapseTimerRef.current);
       document.documentElement.classList.remove("floating-window");
       document.documentElement.classList.remove("floating-expanded");
       document.body.classList.remove("floating-window");
@@ -346,12 +349,24 @@ function FloatingTimer() {
   const isRunning = Boolean(snapshot?.isRunning);
   const statusLabel = snapshot?.mode === "short" ? "休息中" : "专注中";
   const setExpanded = (expanded: boolean) => {
+    if (collapseTimerRef.current) {
+      window.clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = null;
+    }
     setIsExpanded(expanded);
     document.documentElement.classList.toggle("floating-expanded", expanded);
     document.body.classList.toggle("floating-expanded", expanded);
     void (expanded
       ? window.momoFocusNative?.expandFloatingWindow()
       : window.momoFocusNative?.collapseFloatingWindow());
+  };
+  const handleMouseEnter = () => setExpanded(true);
+  const handleMouseLeave = () => {
+    if (collapseTimerRef.current) window.clearTimeout(collapseTimerRef.current);
+    collapseTimerRef.current = window.setTimeout(() => {
+      collapseTimerRef.current = null;
+      setExpanded(false);
+    }, 280);
   };
   const sendCommand = (command: "toggleTimer" | "abandonTask") => {
     void window.momoFocusNative?.floatingCommand(command);
@@ -361,8 +376,8 @@ function FloatingTimer() {
   return (
     <main
       className={`floating-timer-shell ${isExpanded ? "is-expanded" : ""}`}
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <button
         className="floating-timer-orb"
