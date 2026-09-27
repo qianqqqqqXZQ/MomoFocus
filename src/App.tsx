@@ -260,6 +260,16 @@ const dateKey = (date = new Date()) => {
   const offset = date.getTimezoneOffset();
   return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10);
 };
+const getSessionDateKey = (session: FocusSession, fallbackDate = dateKey()) => {
+  if (session.date) return session.date;
+  if (session.startedAt) {
+    const startedAt = new Date(session.startedAt);
+    if (!Number.isNaN(startedAt.getTime())) return dateKey(startedAt);
+  }
+  return fallbackDate;
+};
+const isCompletedSession = (session: FocusSession) =>
+  (session.status ?? "completed") === "completed";
 const dateLabel = (date = new Date()) =>
   `${date.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase()} · ${date.toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" })}`;
 const startOfWeek = (date: Date) => {
@@ -1320,7 +1330,9 @@ function MainApp() {
               <b>
                 {
                   sessions.filter(
-                    (s) => s.date === dateKey() && s.status === "completed",
+                    (s) =>
+                      getSessionDateKey(s) === dateKey() &&
+                      isCompletedSession(s),
                   ).length
                 }{" "}
                 次
@@ -2512,8 +2524,8 @@ function StatsView({ sessions }: { sessions: FocusSession[] }) {
   const distributionSessions = distributionValid
     ? sessions.filter(
         (s) =>
-          (s.date ?? todayKey) >= distributionRange.start &&
-          (s.date ?? todayKey) <= distributionRange.end,
+          getSessionDateKey(s, todayKey) >= distributionRange.start &&
+          getSessionDateKey(s, todayKey) <= distributionRange.end,
       )
     : [];
   const cumulativeValid = Boolean(
@@ -2522,23 +2534,19 @@ function StatsView({ sessions }: { sessions: FocusSession[] }) {
   const cumulativeSessions = cumulativeValid
     ? sessions.filter(
         (s) =>
-          (s.date ?? todayKey) >= cumulativeStart &&
-          (s.date ?? todayKey) <= todayKey,
+          getSessionDateKey(s, todayKey) >= cumulativeStart &&
+          getSessionDateKey(s, todayKey) <= todayKey,
       )
     : [];
   const todaySessions = sessions.filter(
-    (s) => (s.date ?? todayKey) === todayKey,
+    (s) => getSessionDateKey(s, todayKey) === todayKey,
   );
-  const completedCumulative = cumulativeSessions.filter(
-    (s) => (s.status ?? "completed") === "completed",
-  );
+  const completedCumulative = cumulativeSessions.filter(isCompletedSession);
   const cumulativeSeconds = cumulativeSessions.reduce(
     (sum, s) => sum + s.seconds,
     0,
   );
-  const todayCompleted = todaySessions.filter(
-    (s) => (s.status ?? "completed") === "completed",
-  );
+  const todayCompleted = todaySessions.filter(isCompletedSession);
   const todaySeconds = todaySessions.reduce((sum, s) => sum + s.seconds, 0);
   const todayAbandoned = todaySessions.filter(
     (s) => s.status === "abandoned",
