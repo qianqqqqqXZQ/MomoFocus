@@ -51,6 +51,7 @@ html.floating-window {
 }
 body.floating-window {
   color: transparent;
+  -webkit-app-region: drag;
 }
 body.floating-window #root {
   display: block;

@@ -28,15 +28,15 @@ function closeFloatingWindow() {
 function resizeFloatingWindow(expanded) {
   if (!floatingWindow || floatingWindow.isDestroyed()) return false;
   const { x, y } = floatingWindow.getBounds();
-  floatingWindow.setBounds(
-    { x, y, width: expanded ? 320 : 78, height: 78 },
-    false,
-  );
+  const width = expanded ? 320 : 78;
+  floatingWindow.setContentSize(width, 78, false);
+  floatingWindow.setPosition(x, y, false);
   return true;
 }
 
 ipcMain.handle("momofocus:open-floating-window", () => {
   if (floatingWindow && !floatingWindow.isDestroyed()) {
+    resizeFloatingWindow(false);
     floatingWindow.show();
     floatingWindow.focus();
     return true;
@@ -57,6 +57,8 @@ ipcMain.handle("momofocus:open-floating-window", () => {
     frame: false,
     transparent: true,
     backgroundColor: "#00000000",
+    hasShadow: false,
+    useContentSize: true,
     autoHideMenuBar: true,
     parent: mainWindow ?? undefined,
     webPreferences: {
