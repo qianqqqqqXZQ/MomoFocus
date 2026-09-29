@@ -70,7 +70,6 @@ ipcMain.handle("momofocus:open-floating-window", () => {
     hasShadow: false,
     useContentSize: true,
     autoHideMenuBar: true,
-    parent: mainWindow ?? undefined,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
