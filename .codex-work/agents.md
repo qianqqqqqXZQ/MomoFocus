@@ -96,6 +96,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 
 - 2026-09-27：进一步修复浮窗悬停不展开：将进入监听直接绑定到番茄和展开详情区，并取消浮窗 body 的原生拖动区域；番茄仍通过自定义指针事件和主进程 IPC 拖动，点击暂停/继续保持不变。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过。Windows UI 自动化运行态检查因 `@oai/sky` RPC 未配置未执行。
 - 2026-09-29：移除 Electron 浮窗的 `parent: mainWindow` 关系，使浮窗成为独立顶层窗口，主窗口最小化时浮窗继续显示；主窗口关闭时仍通过 `closeFloatingWindow()` 清理浮窗。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过，并完成窗口生命周期 code review。
+- 2026-09-29：补充浮窗 `skipTaskbar` 和 `floating` 置顶层级，主窗口最小化时主动 `showInactive()` 恢复浮窗；暂停逻辑改为按当前时间计算并立即持久化最终快照，修复浮窗暂停显示 00:00 的 state/ref 竞态，并处理倒计时结束临界分支。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过，并完成计时生命周期 code review。
 
 ## 打包与资源约定
 

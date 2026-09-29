@@ -47,6 +47,7 @@ function resizeFloatingWindow(expanded) {
 ipcMain.handle("momofocus:open-floating-window", () => {
   if (floatingWindow && !floatingWindow.isDestroyed()) {
     resizeFloatingWindow(false);
+    floatingWindow.setAlwaysOnTop(true, "floating");
     floatingWindow.show();
     floatingWindow.focus();
     return true;
@@ -63,6 +64,7 @@ ipcMain.handle("momofocus:open-floating-window", () => {
     title: "番茄小窝 · 专注浮窗",
     icon: iconPath,
     alwaysOnTop: true,
+    skipTaskbar: true,
     resizable: true,
     frame: false,
     transparent: true,
@@ -76,6 +78,7 @@ ipcMain.handle("momofocus:open-floating-window", () => {
       preload: path.join(__dirname, "preload.cjs"),
     },
   });
+  floatingWindow.setAlwaysOnTop(true, "floating");
 
   floatingWindow.on("closed", () => {
     floatingWindow = null;
@@ -194,6 +197,11 @@ function createWindow() {
   window.on("closed", () => {
     if (mainWindow === window) mainWindow = null;
     closeFloatingWindow();
+  });
+  window.on("minimize", () => {
+    if (!floatingWindow || floatingWindow.isDestroyed()) return;
+    floatingWindow.setAlwaysOnTop(true, "floating");
+    floatingWindow.showInactive();
   });
 }
 

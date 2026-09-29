@@ -676,8 +676,7 @@ function MainApp() {
   useEffect(() => {
     writeStorage(STORAGE_KEYS.slogan, slogan);
   }, [slogan]);
-  useEffect(() => {
-    if (restoringRef.current) return;
+  const persistTimerSnapshot = (overrides: Partial<TimerSnapshot> = {}) => {
     writeStorage(STORAGE_KEYS.timer, {
       taskId: selectedTaskId,
       mode,
@@ -688,7 +687,12 @@ function MainApp() {
       elapsed,
       completedPending: !isCountup && remaining === 0,
       sessionStartedAt: sessionStartedAtRef.current,
+      ...overrides,
     });
+  };
+  useEffect(() => {
+    if (restoringRef.current) return;
+    persistTimerSnapshot();
   }, [selectedTaskId, mode, isRunning, remaining, elapsed, isCountup]);
 
   const stopTimer = useCallback(() => {
@@ -910,7 +914,42 @@ function MainApp() {
   useEffect(() => () => stopTimer(), [stopTimer]);
   const toggleTimer = () => {
     if (isRunning) {
-      updateTimer();
+      const pausedAt = Date.now();
+      if (isCountup) {
+        const nextElapsed = startedAtRef.current
+          ? startValueRef.current +
+            Math.floor((pausedAt - startedAtRef.current) / 1000)
+          : elapsed;
+        setElapsed(nextElapsed);
+        persistTimerSnapshot({
+          isRunning: false,
+          startedAt: null,
+          elapsed: nextElapsed,
+        });
+      } else {
+        const nextRemaining = startedAtRef.current
+          ? Math.max(
+              0,
+              Math.ceil(
+                (startedAtRef.current +
+                  startValueRef.current * 1000 -
+                  pausedAt) /
+                  1000,
+              ),
+            )
+          : remaining;
+        if (nextRemaining === 0) {
+          updateTimer();
+          return;
+        }
+        setRemaining(nextRemaining);
+        persistTimerSnapshot({
+          isRunning: false,
+          startedAt: null,
+          remaining: nextRemaining,
+          completedPending: false,
+        });
+      }
       setIsRunning(false);
       stopTimer();
       startedAtRef.current = null;
