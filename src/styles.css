@@ -856,7 +856,14 @@ textarea:focus-visible {
   outline: 0;
   background: rgba(255, 255, 255, 0.72);
   color: var(--ink);
-  font: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.todo-row .todo-inline-editor {
+  font-family:
+    "Nunito Sans", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
 }
 .task-row.is-done .task-text {
   color: #aaa69c;
