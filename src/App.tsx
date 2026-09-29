@@ -1842,6 +1842,9 @@ function TimerView(props: TimerViewProps) {
   } = props;
   const [isEditingSlogan, setIsEditingSlogan] = useState(false);
   const [sloganDraft, setSloganDraft] = useState(slogan);
+  const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
+  const [todoDraft, setTodoDraft] = useState("");
+  const todoEditCancelled = useRef(false);
   const startSloganEdit = () => {
     setSloganDraft(slogan);
     setIsEditingSlogan(true);
@@ -1851,6 +1854,21 @@ function TimerView(props: TimerViewProps) {
     if (!trimmedSlogan) return;
     setSlogan(trimmedSlogan);
     setIsEditingSlogan(false);
+  };
+  const startTodoEdit = (todo: Todo) => {
+    todoEditCancelled.current = false;
+    setEditingTodoId(todo.id);
+    setTodoDraft(todo.text);
+  };
+  const finishTodoEdit = (todo: Todo, save: boolean) => {
+    const text = todoDraft.trim();
+    if (save && text) {
+      setTodos((items) =>
+        items.map((item) => (item.id === todo.id ? { ...item, text } : item)),
+      );
+    }
+    setEditingTodoId(null);
+    setTodoDraft("");
   };
   return (
     <>
@@ -2073,7 +2091,34 @@ function TimerView(props: TimerViewProps) {
                   >
                     {todo.done && <Check size={14} />}
                   </button>
-                  <span className="task-text">{todo.text}</span>
+                  {editingTodoId === todo.id ? (
+                    <input
+                      className="todo-inline-editor"
+                      autoFocus
+                      value={todoDraft}
+                      aria-label={`编辑${todo.text}`}
+                      onChange={(event) => setTodoDraft(event.target.value)}
+                      onBlur={() => {
+                        const save = !todoEditCancelled.current;
+                        finishTodoEdit(todo, save);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") finishTodoEdit(todo, true);
+                        if (event.key === "Escape") {
+                          todoEditCancelled.current = true;
+                          finishTodoEdit(todo, false);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span
+                      className="task-text"
+                      onDoubleClick={() => startTodoEdit(todo)}
+                      title="双击编辑"
+                    >
+                      {todo.text}
+                    </span>
+                  )}
                   <button
                     className="delete-button"
                     onClick={() =>
@@ -2162,6 +2207,9 @@ function RightPanel({
   setRightPanelView: Dispatch<SetStateAction<RightPanelView>>;
 }) {
   const [selectedTodoId, setSelectedTodoId] = useState<number | null>(null);
+  const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
+  const [todoDraft, setTodoDraft] = useState("");
+  const todoEditCancelled = useRef(false);
   const [thoughtInput, setThoughtInput] = useState("");
   const [selectedMemoId, setSelectedMemoId] = useState<number | null>(
     memoNotes[0]?.id ?? null,
@@ -2234,6 +2282,21 @@ function RightPanel({
   const selectTodo = (todo: Todo) => {
     setSelectedTodoId(todo.id);
     setThoughtInput("");
+  };
+  const startTodoEdit = (todo: Todo) => {
+    todoEditCancelled.current = false;
+    setEditingTodoId(todo.id);
+    setTodoDraft(todo.text);
+  };
+  const finishTodoEdit = (todo: Todo, save: boolean) => {
+    const text = todoDraft.trim();
+    if (save && text) {
+      setTodos((items) =>
+        items.map((item) => (item.id === todo.id ? { ...item, text } : item)),
+      );
+    }
+    setEditingTodoId(null);
+    setTodoDraft("");
   };
   const addTodoThought = () => {
     const text = thoughtInput.trim();
@@ -2322,10 +2385,39 @@ function RightPanel({
                   >
                     {todo.done && <Check size={14} />}
                   </button>
-                  <span className="task-text">
-                    {todo.text}
-                    <small>{(todo.thoughts ?? []).length} 条想法</small>
-                  </span>
+                  {editingTodoId === todo.id ? (
+                    <input
+                      className="todo-inline-editor"
+                      autoFocus
+                      value={todoDraft}
+                      aria-label={`编辑${todo.text}`}
+                      onChange={(event) => setTodoDraft(event.target.value)}
+                      onBlur={() => {
+                        const save = !todoEditCancelled.current;
+                        finishTodoEdit(todo, save);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") finishTodoEdit(todo, true);
+                        if (event.key === "Escape") {
+                          todoEditCancelled.current = true;
+                          finishTodoEdit(todo, false);
+                        }
+                      }}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  ) : (
+                    <span
+                      className="task-text"
+                      onDoubleClick={(event) => {
+                        event.stopPropagation();
+                        startTodoEdit(todo);
+                      }}
+                      title="双击编辑"
+                    >
+                      {todo.text}
+                      <small>{(todo.thoughts ?? []).length} 条想法</small>
+                    </span>
+                  )}
                   <button
                     className="delete-button"
                     aria-label={`删除${todo.text}`}
