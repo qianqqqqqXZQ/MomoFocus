@@ -94,6 +94,8 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 
 ## 最近验证补充
 
+- 2026-09-30：调整番茄钟放弃流程，专注阶段放弃后进入休息，休息阶段放弃才结束并记录；右上角今日专注跟随当天历史记录；少于 5 秒提示改为页面顶部绿色临时通知，5 秒内自动收起。`npm run format:check`、`npm run build`、`git diff --check` 通过；5174 本地页面加载成功且无浏览器 error/warn 日志，完成计时生命周期 code review。
+
 - 2026-09-29：修正 Todo 双击编辑时输入框继承行字体而放大的问题；右侧列表编辑框保持 12px，旧列表保持 13px。`npm run format:check`、`npm run build`、`git diff --check` 通过，并复核 CSS 作用范围。
 - 2026-09-29：Todo 支持双击进入行内编辑，Enter/失焦保存、Escape 取消，首页与右侧列表行为一致；空草稿不会覆盖原内容，完成状态、想法和删除逻辑保持不变。`npm run format:check`、`npm run build`、`git diff --check` 通过，并完成编辑状态生命周期 code review。
 

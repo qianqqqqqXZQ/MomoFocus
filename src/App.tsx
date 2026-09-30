@@ -616,6 +616,7 @@ function MainApp() {
   const [showSoundTip, setShowSoundTip] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
+  const [transientNotice, setTransientNotice] = useState("");
   const pendingPomodoroFocusSecondsRef = useRef(0);
   const timerRef = useRef<number | null>(null);
   const startedAtRef = useRef<number | null>(null);
@@ -650,6 +651,9 @@ function MainApp() {
     () => todos.filter((todo) => todo.done).length,
     [todos],
   );
+  const todayFocusCount = sessions.filter(
+    (session) => getSessionDateKey(session) === dateKey(),
+  ).length;
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.tasks, tasks);
@@ -676,6 +680,11 @@ function MainApp() {
   useEffect(() => {
     writeStorage(STORAGE_KEYS.slogan, slogan);
   }, [slogan]);
+  useEffect(() => {
+    if (!transientNotice) return;
+    const timeout = window.setTimeout(() => setTransientNotice(""), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [transientNotice]);
   const persistTimerSnapshot = (overrides: Partial<TimerSnapshot> = {}) => {
     writeStorage(STORAGE_KEYS.timer, {
       taskId: selectedTaskId,
@@ -960,14 +969,33 @@ function MainApp() {
   };
   const abandonTask = () => {
     if (!selectedTask) return;
-    updateTimer();
-    const seconds =
-      mode === "short"
-        ? pendingPomodoroFocusSecondsRef.current
-        : getCurrentPhaseSeconds();
-    const shouldRecord = seconds >= 5;
-    if (shouldRecord) recordSession(seconds, "abandoned", false);
-    else alert("专注时长不足 5 秒，不计入历史记录");
+    const seconds = getCurrentPhaseSeconds();
+
+    if (!isCountup && mode === "focus") {
+      pendingPomodoroFocusSecondsRef.current = seconds;
+      if (seconds < 5) {
+        setTransientNotice("本次专注不足 5 秒，不会计入历史记录");
+      }
+      stopTimer();
+      setMode("short");
+      setRemaining(breakMinutes * 60);
+      setElapsed(0);
+      setCompletionMessage("已放弃专注，进入休息");
+      startedAtRef.current = Date.now();
+      startValueRef.current = breakMinutes * 60;
+      setIsRunning(true);
+      timerRef.current = window.setInterval(updateTimer, 250);
+      return;
+    }
+
+    const abandonedSeconds = isCountup
+      ? seconds
+      : pendingPomodoroFocusSecondsRef.current;
+    if (abandonedSeconds >= 5) {
+      recordSession(abandonedSeconds, "abandoned", false);
+    } else if (isCountup) {
+      setTransientNotice("本次专注不足 5 秒，不会计入历史记录");
+    }
     stopTimer();
     setIsRunning(false);
     startedAtRef.current = null;
@@ -1351,6 +1379,12 @@ function MainApp() {
 
   return (
     <main className="app-shell">
+      {transientNotice && (
+        <div className="timer-notice" role="status">
+          <CheckCircle2 size={17} />
+          <span>{transientNotice}</span>
+        </div>
+      )}
       <header className="topbar">
         <div className="brand-lockup">
           <div className="brand-mark">
@@ -1365,17 +1399,7 @@ function MainApp() {
           {view === "timer" ? (
             <div className="today-state">
               <span className="status-dot" />
-              今日专注{" "}
-              <b>
-                {
-                  sessions.filter(
-                    (s) =>
-                      getSessionDateKey(s) === dateKey() &&
-                      isCompletedSession(s),
-                  ).length
-                }{" "}
-                次
-              </b>
+              今日专注 <b>{todayFocusCount} 次</b>
             </div>
           ) : (
             <button className="back-button" onClick={() => setView("timer")}>

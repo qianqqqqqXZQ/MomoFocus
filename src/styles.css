@@ -252,6 +252,45 @@ textarea:focus-visible {
   display: flex;
   flex-direction: column;
 }
+.timer-notice {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  max-width: min(calc(100vw - 32px), 360px);
+  padding: 0 16px;
+  border: 1px solid rgba(109, 156, 134, 0.28);
+  border-radius: 12px;
+  background: #e4f4ed;
+  color: #527b67;
+  box-shadow: 0 8px 24px rgba(73, 101, 97, 0.14);
+  font-size: 12px;
+  transform: translate(-50%, -14px);
+  animation: timer-notice-in-out 5s ease both;
+}
+.timer-notice svg {
+  flex: 0 0 auto;
+  color: var(--mint-dark);
+}
+@keyframes timer-notice-in-out {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -14px);
+  }
+  12%,
+  82% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -14px);
+  }
+}
 .topbar {
   min-height: 79px;
   display: flex;
