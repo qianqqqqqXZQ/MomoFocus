@@ -2624,7 +2624,7 @@ function FocusHistory({
       {sessions.length === 0 ? (
         <p className="empty-history">完成一次专注后，记录会出现在这里。</p>
       ) : (
-        sessions.slice(0, 3).map((session) => (
+        sessions.map((session) => (
           <div className="session-list" key={session.id}>
             <div>
               <i className="session-dot" />
