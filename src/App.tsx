@@ -45,7 +45,6 @@ type FocusTask = {
   breakMinutes?: number;
   habitPeriod?: HabitPeriod;
   habitTargetMinutes?: number;
-  retainIncompleteRecords?: boolean;
   color?: string;
 };
 type TodoThought = { id: number; text: string; createdAt: string };
@@ -200,7 +199,6 @@ const normalizeTask = (task: FocusTask): FocusTask => ({
   breakMinutes: task.breakMinutes ?? DEFAULT_BREAK_MINUTES,
   habitPeriod: task.habitPeriod ?? "day",
   habitTargetMinutes: task.habitTargetMinutes ?? DEFAULT_FOCUS_MINUTES,
-  retainIncompleteRecords: task.retainIncompleteRecords ?? true,
 });
 const isFocusTaskArray = (value: unknown): value is FocusTask[] =>
   Array.isArray(value) &&
@@ -602,8 +600,6 @@ function MainApp() {
   const [taskEditHabitTargetMinutes, setTaskEditHabitTargetMinutes] = useState(
     DEFAULT_FOCUS_MINUTES,
   );
-  const [taskEditRetainIncompleteRecords, setTaskEditRetainIncompleteRecords] =
-    useState(true);
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [isChoosingTaskColor, setIsChoosingTaskColor] = useState(false);
   const [confirmingTaskDelete, setConfirmingTaskDelete] = useState(false);
@@ -620,10 +616,6 @@ function MainApp() {
     useState<HabitPeriod>("day");
   const [taskHabitTargetMinutesInput, setTaskHabitTargetMinutesInput] =
     useState(DEFAULT_FOCUS_MINUTES);
-  const [
-    taskRetainIncompleteRecordsInput,
-    setTaskRetainIncompleteRecordsInput,
-  ] = useState(true);
   const [taskColorInput, setTaskColorInput] = useState(DEFAULT_TASK_COLOR);
   const [todoInput, setTodoInput] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
@@ -671,6 +663,7 @@ function MainApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [completionMessage, setCompletionMessage] = useState("");
   const [transientNotice, setTransientNotice] = useState("");
+  const [habitAbandonPrompt, setHabitAbandonPrompt] = useState(false);
   const pendingPomodoroFocusSecondsRef = useRef(0);
   const timerRef = useRef<number | null>(null);
   const startedAtRef = useRef<number | null>(null);
@@ -1052,15 +1045,19 @@ function MainApp() {
     }
     startTimer();
   };
-  const abandonTask = () => {
+  const abandonTask = (keepHabitRecord?: boolean) => {
     if (!selectedTask) return;
     const seconds = getCurrentPhaseSeconds();
 
     if (isHabit) {
-      if (seconds >= 5 && selectedTask.retainIncompleteRecords !== false) {
+      if (keepHabitRecord === undefined) {
+        setHabitAbandonPrompt(true);
+        return;
+      }
+      if (seconds >= 5 && keepHabitRecord) {
         recordSession(seconds, "abandoned", false);
       } else if (seconds >= 5) {
-        setTransientNotice("本次习惯未完成，按设置不会留下记录");
+        setTransientNotice("本次习惯未完成，本次不留下记录");
       } else {
         setTransientNotice("本次习惯不足 5 秒，不会计入历史记录");
       }
@@ -1133,7 +1130,6 @@ function MainApp() {
     setTaskEditHabitTargetMinutes(
       task.habitTargetMinutes ?? DEFAULT_FOCUS_MINUTES,
     );
-    setTaskEditRetainIncompleteRecords(task.retainIncompleteRecords !== false);
     setIsEditingTask(false);
     setIsChoosingTaskColor(false);
     setConfirmingTaskDelete(false);
@@ -1147,7 +1143,7 @@ function MainApp() {
       if (!isRunning) startTimer();
       return;
     }
-    if (isRunning) abandonTask();
+    if (isRunning) abandonTask(false);
     stopTimer();
     setIsRunning(false);
     pendingStartTaskIdRef.current = task.id;
@@ -1173,11 +1169,9 @@ function MainApp() {
           (taskInDetails.breakMinutes ?? DEFAULT_BREAK_MINUTES) ||
         taskEditHabitPeriod !== (taskInDetails.habitPeriod ?? "day") ||
         taskEditHabitTargetMinutes !==
-          (taskInDetails.habitTargetMinutes ?? DEFAULT_FOCUS_MINUTES) ||
-        taskEditRetainIncompleteRecords !==
-          (taskInDetails.retainIncompleteRecords !== false))
+          (taskInDetails.habitTargetMinutes ?? DEFAULT_FOCUS_MINUTES))
     ) {
-      if (isRunning) abandonTask();
+      if (isRunning) abandonTask(false);
       stopTimer();
       setIsRunning(false);
       startedAtRef.current = null;
@@ -1203,7 +1197,6 @@ function MainApp() {
               breakMinutes: taskEditBreakMinutes,
               habitPeriod: taskEditHabitPeriod,
               habitTargetMinutes: taskEditHabitTargetMinutes,
-              retainIncompleteRecords: taskEditRetainIncompleteRecords,
             }
           : task,
       ),
@@ -1230,7 +1223,7 @@ function MainApp() {
   const deleteTask = () => {
     if (!taskInDetails) return;
     if (selectedTaskId === taskInDetails.id) {
-      if (isRunning) abandonTask();
+      if (isRunning) abandonTask(false);
       stopTimer();
       setIsRunning(false);
       setSelectedTaskId(null);
@@ -1265,7 +1258,6 @@ function MainApp() {
         breakMinutes: taskBreakMinutesInput,
         habitPeriod: taskHabitPeriodInput,
         habitTargetMinutes: taskHabitTargetMinutesInput,
-        retainIncompleteRecords: taskRetainIncompleteRecordsInput,
         color: taskColorInput,
       },
     ]);
@@ -1276,7 +1268,6 @@ function MainApp() {
     setTaskBreakMinutesInput(DEFAULT_BREAK_MINUTES);
     setTaskHabitPeriodInput("day");
     setTaskHabitTargetMinutesInput(DEFAULT_FOCUS_MINUTES);
-    setTaskRetainIncompleteRecordsInput(true);
     setTaskColorInput(DEFAULT_TASK_COLOR);
     setIsCreatingTask(false);
   };
@@ -1288,7 +1279,6 @@ function MainApp() {
     setTaskBreakMinutesInput(DEFAULT_BREAK_MINUTES);
     setTaskHabitPeriodInput("day");
     setTaskHabitTargetMinutesInput(DEFAULT_FOCUS_MINUTES);
-    setTaskRetainIncompleteRecordsInput(true);
     setTaskColorInput(DEFAULT_TASK_COLOR);
     setIsCreatingTask(false);
   };
@@ -1312,6 +1302,10 @@ function MainApp() {
         return;
       }
       if (taskDetailsId !== null) return;
+      if (habitAbandonPrompt) {
+        if (event.key === "Escape") setHabitAbandonPrompt(false);
+        return;
+      }
       if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
       if (event.key === " ") {
         event.preventDefault();
@@ -1482,18 +1476,6 @@ function MainApp() {
                       分钟
                     </label>
                   </div>
-                  <label className="habit-record-option">
-                    <input
-                      type="checkbox"
-                      checked={taskRetainIncompleteRecordsInput}
-                      onChange={(event) =>
-                        setTaskRetainIncompleteRecordsInput(
-                          event.target.checked,
-                        )
-                      }
-                    />
-                    未完成时保留本次记录
-                  </label>
                 </>
               ) : (
                 <div className="task-duration-fields">
@@ -1579,6 +1561,46 @@ function MainApp() {
         <div className="timer-notice" role="status">
           <CheckCircle2 size={17} />
           <span>{transientNotice}</span>
+        </div>
+      )}
+      {habitAbandonPrompt && selectedTask && isHabit && (
+        <div className="habit-abandon-backdrop">
+          <section
+            className="habit-abandon-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="habit-abandon-title"
+          >
+            <span className="section-kicker">养习惯</span>
+            <h2 id="habit-abandon-title">这次还要留下记录吗？</h2>
+            <p>本次没有完成目标时长，可以选择是否保留这段未完成记录。</p>
+            <div className="habit-abandon-actions">
+              <button
+                className="primary-button"
+                onClick={() => {
+                  setHabitAbandonPrompt(false);
+                  abandonTask(true);
+                }}
+              >
+                保留记录并结束
+              </button>
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  setHabitAbandonPrompt(false);
+                  abandonTask(false);
+                }}
+              >
+                结束且不记录
+              </button>
+              <button
+                className="text-button"
+                onClick={() => setHabitAbandonPrompt(false)}
+              >
+                继续计时
+              </button>
+            </div>
+          </section>
         </div>
       )}
       <header className="topbar">
@@ -1685,8 +1707,11 @@ function MainApp() {
             renderTaskEntry,
             openTaskDetails,
             isCountup,
+            isHabit,
             mode,
             displayedSeconds,
+            elapsed,
+            totalSeconds,
             radius,
             circumference,
             progress,
@@ -1727,8 +1752,6 @@ function MainApp() {
           setEditHabitPeriod={setTaskEditHabitPeriod}
           editHabitTargetMinutes={taskEditHabitTargetMinutes}
           setEditHabitTargetMinutes={setTaskEditHabitTargetMinutes}
-          editRetainIncompleteRecords={taskEditRetainIncompleteRecords}
-          setEditRetainIncompleteRecords={setTaskEditRetainIncompleteRecords}
           isEditing={isEditingTask}
           setIsEditing={setIsEditingTask}
           choosingColor={isChoosingTaskColor}
@@ -1763,8 +1786,6 @@ function TaskDetailsDialog({
   setEditHabitPeriod,
   editHabitTargetMinutes,
   setEditHabitTargetMinutes,
-  editRetainIncompleteRecords,
-  setEditRetainIncompleteRecords,
   isEditing,
   setIsEditing,
   choosingColor,
@@ -1793,8 +1814,6 @@ function TaskDetailsDialog({
   setEditHabitPeriod: Dispatch<SetStateAction<HabitPeriod>>;
   editHabitTargetMinutes: number;
   setEditHabitTargetMinutes: Dispatch<SetStateAction<number>>;
-  editRetainIncompleteRecords: boolean;
-  setEditRetainIncompleteRecords: Dispatch<SetStateAction<boolean>>;
   isEditing: boolean;
   setIsEditing: Dispatch<SetStateAction<boolean>>;
   choosingColor: boolean;
@@ -1907,16 +1926,6 @@ function TaskDetailsDialog({
                       )
                     }
                   />
-                </label>
-                <label className="habit-record-option">
-                  <input
-                    type="checkbox"
-                    checked={editRetainIncompleteRecords}
-                    onChange={(event) =>
-                      setEditRetainIncompleteRecords(event.target.checked)
-                    }
-                  />
-                  未完成时保留本次记录
                 </label>
               </>
             ) : editType === "pomodoro" ? (
@@ -2044,9 +2053,6 @@ function TaskDetailsDialog({
                     setEditHabitTargetMinutes(
                       task.habitTargetMinutes ?? DEFAULT_FOCUS_MINUTES,
                     );
-                    setEditRetainIncompleteRecords(
-                      task.retainIncompleteRecords !== false,
-                    );
                     setIsEditing(true);
                   }}
                 >
@@ -2090,8 +2096,11 @@ type TimerViewProps = {
   renderTaskEntry: () => JSX.Element;
   openTaskDetails: (task: FocusTask) => void;
   isCountup: boolean;
+  isHabit: boolean;
   mode: Mode;
   displayedSeconds: number;
+  elapsed: number;
+  totalSeconds: number;
   radius: number;
   circumference: number;
   progress: number;
@@ -2130,8 +2139,11 @@ function TimerView(props: TimerViewProps) {
     renderTaskEntry,
     openTaskDetails,
     isCountup,
+    isHabit,
     mode,
     displayedSeconds,
+    elapsed,
+    totalSeconds,
     radius,
     circumference,
     progress,
