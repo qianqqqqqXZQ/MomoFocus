@@ -28,6 +28,8 @@ import {
 
 type Mode = "focus" | "short" | "long";
 type TaskType = "pomodoro" | "countup";
+type TaskKind = "pomodoro" | "habit";
+type HabitPeriod = "day" | "week" | "month";
 type View = "timer" | "stats";
 type RightPanelView = "todo" | "notes";
 type FocusStatus = "completed" | "abandoned" | "skipped";
@@ -38,8 +40,12 @@ type FocusTask = {
   focusSeconds: number;
   done: boolean;
   type: TaskType;
+  kind?: TaskKind;
   focusMinutes?: number;
   breakMinutes?: number;
+  habitPeriod?: HabitPeriod;
+  habitTargetMinutes?: number;
+  retainIncompleteRecords?: boolean;
   color?: string;
 };
 type TodoThought = { id: number; text: string; createdAt: string };
@@ -97,6 +103,11 @@ const DEFAULT_FOCUS_MINUTES = 25;
 const DEFAULT_BREAK_MINUTES = 5;
 const MIN_TIMER_MINUTES = 1;
 const MAX_TIMER_MINUTES = 180;
+const HABIT_PERIOD_LABELS: Record<HabitPeriod, string> = {
+  day: "每天",
+  week: "每周",
+  month: "每月",
+};
 const initialNotes: Note[] = [
   {
     id: 1,
@@ -146,6 +157,19 @@ const TASK_COLORS = [
 const DEFAULT_TASK_COLOR = TASK_COLORS[0].id;
 const getTaskColor = (color?: string) =>
   TASK_COLORS.find((item) => item.id === color) ?? TASK_COLORS[0];
+const getTaskKind = (task: FocusTask) => task.kind ?? "pomodoro";
+const getTaskTargetMinutes = (task: FocusTask) =>
+  getTaskKind(task) === "habit"
+    ? (task.habitTargetMinutes ?? DEFAULT_FOCUS_MINUTES)
+    : (task.focusMinutes ?? DEFAULT_FOCUS_MINUTES);
+const getTaskDescription = (task: FocusTask) => {
+  if (getTaskKind(task) === "habit") {
+    return `养习惯 · ${HABIT_PERIOD_LABELS[task.habitPeriod ?? "day"]} ${getTaskTargetMinutes(task)} 分钟 · ${task.type === "countup" ? "正计时" : "倒计时"}`;
+  }
+  return task.type === "countup"
+    ? "普通番茄钟 · 正计时"
+    : `普通番茄钟 · ${task.focusMinutes ?? DEFAULT_FOCUS_MINUTES}/${task.breakMinutes ?? DEFAULT_BREAK_MINUTES} 分钟`;
+};
 const readStorage = <T,>(
   key: string,
   fallback: T,
@@ -171,8 +195,12 @@ const nextId = () => Date.now() * 1000 + Math.floor(Math.random() * 1000);
 const isArray = <T,>(value: unknown): value is T[] => Array.isArray(value);
 const normalizeTask = (task: FocusTask): FocusTask => ({
   ...task,
+  kind: task.kind ?? "pomodoro",
   focusMinutes: task.focusMinutes ?? DEFAULT_FOCUS_MINUTES,
   breakMinutes: task.breakMinutes ?? DEFAULT_BREAK_MINUTES,
+  habitPeriod: task.habitPeriod ?? "day",
+  habitTargetMinutes: task.habitTargetMinutes ?? DEFAULT_FOCUS_MINUTES,
+  retainIncompleteRecords: task.retainIncompleteRecords ?? true,
 });
 const isFocusTaskArray = (value: unknown): value is FocusTask[] =>
   Array.isArray(value) &&
@@ -382,17 +410,26 @@ function FloatingTimer() {
         : snapshot.remaining
     : 0;
   const isCountup = task?.type === "countup";
+  const isHabit = task ? getTaskKind(task) === "habit" : false;
   const totalSeconds =
     (isCountup
-      ? (task?.focusMinutes ?? DEFAULT_FOCUS_MINUTES)
+      ? task
+        ? getTaskTargetMinutes(task)
+        : DEFAULT_FOCUS_MINUTES
       : snapshot?.mode === "focus"
-        ? (task?.focusMinutes ?? DEFAULT_FOCUS_MINUTES)
+        ? task
+          ? getTaskTargetMinutes(task)
+          : DEFAULT_FOCUS_MINUTES
         : (task?.breakMinutes ?? DEFAULT_BREAK_MINUTES)) * 60;
   const progress = isCountup
     ? Math.min(1, liveSeconds / totalSeconds)
     : Math.min(1, Math.max(0, 1 - liveSeconds / totalSeconds));
   const isRunning = Boolean(snapshot?.isRunning);
-  const statusLabel = snapshot?.mode === "short" ? "休息中" : "专注中";
+  const statusLabel = isHabit
+    ? "养习惯"
+    : snapshot?.mode === "short"
+      ? "休息中"
+      : "专注中";
   const setExpanded = (expanded: boolean) => {
     if (collapseTimerRef.current) {
       window.clearTimeout(collapseTimerRef.current);
@@ -469,7 +506,7 @@ function FloatingTimer() {
           <strong>{formatTime(liveSeconds)}</strong>
         </div>
         <span className="floating-timer-task" title={taskName}>
-          {taskName}
+          {task ? getTaskDescription(task) : taskName}
         </span>
         <div className="floating-timer-actions">
           <button
@@ -552,6 +589,7 @@ function MainApp() {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [taskDetailsId, setTaskDetailsId] = useState<number | null>(null);
   const [taskEditText, setTaskEditText] = useState("");
+  const [taskEditKind, setTaskEditKind] = useState<TaskKind>("pomodoro");
   const [taskEditType, setTaskEditType] = useState<TaskType>("pomodoro");
   const [taskEditFocusMinutes, setTaskEditFocusMinutes] = useState(
     DEFAULT_FOCUS_MINUTES,
@@ -559,10 +597,18 @@ function MainApp() {
   const [taskEditBreakMinutes, setTaskEditBreakMinutes] = useState(
     DEFAULT_BREAK_MINUTES,
   );
+  const [taskEditHabitPeriod, setTaskEditHabitPeriod] =
+    useState<HabitPeriod>("day");
+  const [taskEditHabitTargetMinutes, setTaskEditHabitTargetMinutes] = useState(
+    DEFAULT_FOCUS_MINUTES,
+  );
+  const [taskEditRetainIncompleteRecords, setTaskEditRetainIncompleteRecords] =
+    useState(true);
   const [isEditingTask, setIsEditingTask] = useState(false);
   const [isChoosingTaskColor, setIsChoosingTaskColor] = useState(false);
   const [confirmingTaskDelete, setConfirmingTaskDelete] = useState(false);
   const [taskInput, setTaskInput] = useState("");
+  const [taskKindInput, setTaskKindInput] = useState<TaskKind>("pomodoro");
   const [taskTypeInput, setTaskTypeInput] = useState<TaskType>("pomodoro");
   const [taskFocusMinutesInput, setTaskFocusMinutesInput] = useState(
     DEFAULT_FOCUS_MINUTES,
@@ -570,6 +616,14 @@ function MainApp() {
   const [taskBreakMinutesInput, setTaskBreakMinutesInput] = useState(
     DEFAULT_BREAK_MINUTES,
   );
+  const [taskHabitPeriodInput, setTaskHabitPeriodInput] =
+    useState<HabitPeriod>("day");
+  const [taskHabitTargetMinutesInput, setTaskHabitTargetMinutesInput] =
+    useState(DEFAULT_FOCUS_MINUTES);
+  const [
+    taskRetainIncompleteRecordsInput,
+    setTaskRetainIncompleteRecordsInput,
+  ] = useState(true);
   const [taskColorInput, setTaskColorInput] = useState(DEFAULT_TASK_COLOR);
   const [todoInput, setTodoInput] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
@@ -629,13 +683,21 @@ function MainApp() {
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
   const taskInDetails = tasks.find((task) => task.id === taskDetailsId) ?? null;
   const isCountup = selectedTask?.type === "countup";
+  const isHabit = selectedTask ? getTaskKind(selectedTask) === "habit" : false;
   const focusMinutes = selectedTask?.focusMinutes ?? DEFAULT_FOCUS_MINUTES;
   const breakMinutes = selectedTask?.breakMinutes ?? DEFAULT_BREAK_MINUTES;
+  const targetMinutes = selectedTask
+    ? getTaskTargetMinutes(selectedTask)
+    : DEFAULT_FOCUS_MINUTES;
   const totalSeconds =
     (isCountup
-      ? DEFAULT_FOCUS_MINUTES
+      ? isHabit
+        ? targetMinutes
+        : DEFAULT_FOCUS_MINUTES
       : mode === "focus"
-        ? focusMinutes
+        ? isHabit
+          ? targetMinutes
+          : focusMinutes
         : breakMinutes) * 60;
   const displayedSeconds = isCountup ? elapsed : remaining;
   const progress = isCountup
@@ -792,6 +854,17 @@ function MainApp() {
   const finishPhase = useCallback(() => {
     if (!selectedTask) return;
     playCompletionSound();
+    if (isHabit) {
+      recordSession(getCurrentPhaseSeconds(), "completed", true);
+      setIsRunning(false);
+      startedAtRef.current = null;
+      setRemaining(0);
+      setElapsed(targetMinutes * 60);
+      setCompletionMessage("习惯目标完成");
+      notifyUser("习惯目标完成", "今天的目标时间已经完成了。");
+      closeFloatingWindow();
+      return;
+    }
     if (isCountup) return;
     if (mode === "focus") {
       pendingPomodoroFocusSecondsRef.current = getCurrentPhaseSeconds();
@@ -818,20 +891,26 @@ function MainApp() {
     closeFloatingWindow,
     breakMinutes,
     getCurrentPhaseSeconds,
+    isHabit,
     isCountup,
     mode,
     notifyUser,
     playCompletionSound,
     recordSession,
     selectedTask,
+    targetMinutes,
   ]);
   const updateTimer = useCallback(() => {
     if (!startedAtRef.current) return;
     if (isCountup) {
-      setElapsed(
+      const nextElapsed =
         startValueRef.current +
-          Math.floor((Date.now() - startedAtRef.current) / 1000),
-      );
+        Math.floor((Date.now() - startedAtRef.current) / 1000);
+      setElapsed(nextElapsed);
+      if (isHabit && nextElapsed >= totalSeconds) {
+        stopTimer();
+        finishPhase();
+      }
       return;
     }
     const next = Math.max(
@@ -847,9 +926,14 @@ function MainApp() {
       setIsRunning(false);
       finishPhase();
     }
-  }, [finishPhase, isCountup, stopTimer]);
+  }, [finishPhase, isCountup, isHabit, stopTimer, totalSeconds]);
   const startTimer = useCallback(() => {
-    if (!selectedTask || startedAtRef.current || (!isCountup && remaining <= 0))
+    if (
+      !selectedTask ||
+      startedAtRef.current ||
+      (!isCountup && remaining <= 0) ||
+      (isHabit && elapsed >= totalSeconds)
+    )
       return;
     startedAtRef.current = Date.now();
     if (!sessionStartedAtRef.current) sessionStartedAtRef.current = Date.now();
@@ -866,6 +950,7 @@ function MainApp() {
     remaining,
     selectedTask,
     stopTimer,
+    totalSeconds,
     updateTimer,
   ]);
   useEffect(() => {
@@ -971,6 +1056,26 @@ function MainApp() {
     if (!selectedTask) return;
     const seconds = getCurrentPhaseSeconds();
 
+    if (isHabit) {
+      if (seconds >= 5 && selectedTask.retainIncompleteRecords !== false) {
+        recordSession(seconds, "abandoned", false);
+      } else if (seconds >= 5) {
+        setTransientNotice("本次习惯未完成，按设置不会留下记录");
+      } else {
+        setTransientNotice("本次习惯不足 5 秒，不会计入历史记录");
+      }
+      stopTimer();
+      setIsRunning(false);
+      startedAtRef.current = null;
+      sessionStartedAtRef.current = null;
+      setSelectedTaskId(null);
+      setElapsed(0);
+      setRemaining(targetMinutes * 60);
+      setCompletionMessage("");
+      closeFloatingWindow();
+      return;
+    }
+
     if (!isCountup && mode === "focus") {
       pendingPomodoroFocusSecondsRef.current = seconds;
       if (seconds < 5) {
@@ -1020,9 +1125,15 @@ function MainApp() {
   const openTaskDetails = (task: FocusTask) => {
     setTaskDetailsId(task.id);
     setTaskEditText(task.text);
+    setTaskEditKind(getTaskKind(task));
     setTaskEditType(task.type);
     setTaskEditFocusMinutes(task.focusMinutes ?? DEFAULT_FOCUS_MINUTES);
     setTaskEditBreakMinutes(task.breakMinutes ?? DEFAULT_BREAK_MINUTES);
+    setTaskEditHabitPeriod(task.habitPeriod ?? "day");
+    setTaskEditHabitTargetMinutes(
+      task.habitTargetMinutes ?? DEFAULT_FOCUS_MINUTES,
+    );
+    setTaskEditRetainIncompleteRecords(task.retainIncompleteRecords !== false);
     setIsEditingTask(false);
     setIsChoosingTaskColor(false);
     setConfirmingTaskDelete(false);
@@ -1042,11 +1153,7 @@ function MainApp() {
     pendingStartTaskIdRef.current = task.id;
     setSelectedTaskId(task.id);
     setMode(task.type === "countup" ? "focus" : "focus");
-    setRemaining(
-      (task.type === "countup"
-        ? DEFAULT_FOCUS_MINUTES
-        : (task.focusMinutes ?? DEFAULT_FOCUS_MINUTES)) * 60,
-    );
+    setRemaining(getTaskTargetMinutes(task) * 60);
     setElapsed(0);
     startedAtRef.current = null;
     sessionStartedAtRef.current = null;
@@ -1059,10 +1166,16 @@ function MainApp() {
     if (
       selectedTaskId === taskInDetails.id &&
       (taskEditType !== taskInDetails.type ||
+        taskEditKind !== getTaskKind(taskInDetails) ||
         taskEditFocusMinutes !==
           (taskInDetails.focusMinutes ?? DEFAULT_FOCUS_MINUTES) ||
         taskEditBreakMinutes !==
-          (taskInDetails.breakMinutes ?? DEFAULT_BREAK_MINUTES))
+          (taskInDetails.breakMinutes ?? DEFAULT_BREAK_MINUTES) ||
+        taskEditHabitPeriod !== (taskInDetails.habitPeriod ?? "day") ||
+        taskEditHabitTargetMinutes !==
+          (taskInDetails.habitTargetMinutes ?? DEFAULT_FOCUS_MINUTES) ||
+        taskEditRetainIncompleteRecords !==
+          (taskInDetails.retainIncompleteRecords !== false))
     ) {
       if (isRunning) abandonTask();
       stopTimer();
@@ -1070,9 +1183,11 @@ function MainApp() {
       startedAtRef.current = null;
       setMode("focus");
       setRemaining(
-        (taskEditType === "countup"
-          ? DEFAULT_FOCUS_MINUTES
-          : taskEditFocusMinutes) * 60,
+        (taskEditKind === "habit"
+          ? taskEditHabitTargetMinutes
+          : taskEditType === "countup"
+            ? DEFAULT_FOCUS_MINUTES
+            : taskEditFocusMinutes) * 60,
       );
       setElapsed(0);
     }
@@ -1082,9 +1197,13 @@ function MainApp() {
           ? {
               ...task,
               text,
+              kind: taskEditKind,
               type: taskEditType,
               focusMinutes: taskEditFocusMinutes,
               breakMinutes: taskEditBreakMinutes,
+              habitPeriod: taskEditHabitPeriod,
+              habitTargetMinutes: taskEditHabitTargetMinutes,
+              retainIncompleteRecords: taskEditRetainIncompleteRecords,
             }
           : task,
       ),
@@ -1140,24 +1259,36 @@ function MainApp() {
         rounds: 0,
         focusSeconds: 0,
         done: false,
+        kind: taskKindInput,
         type: taskTypeInput,
         focusMinutes: taskFocusMinutesInput,
         breakMinutes: taskBreakMinutesInput,
+        habitPeriod: taskHabitPeriodInput,
+        habitTargetMinutes: taskHabitTargetMinutesInput,
+        retainIncompleteRecords: taskRetainIncompleteRecordsInput,
         color: taskColorInput,
       },
     ]);
     setTaskInput("");
+    setTaskKindInput("pomodoro");
     setTaskTypeInput("pomodoro");
     setTaskFocusMinutesInput(DEFAULT_FOCUS_MINUTES);
     setTaskBreakMinutesInput(DEFAULT_BREAK_MINUTES);
+    setTaskHabitPeriodInput("day");
+    setTaskHabitTargetMinutesInput(DEFAULT_FOCUS_MINUTES);
+    setTaskRetainIncompleteRecordsInput(true);
     setTaskColorInput(DEFAULT_TASK_COLOR);
     setIsCreatingTask(false);
   };
   const cancelTaskCreation = () => {
     setTaskInput("");
+    setTaskKindInput("pomodoro");
     setTaskTypeInput("pomodoro");
     setTaskFocusMinutesInput(DEFAULT_FOCUS_MINUTES);
     setTaskBreakMinutesInput(DEFAULT_BREAK_MINUTES);
+    setTaskHabitPeriodInput("day");
+    setTaskHabitTargetMinutesInput(DEFAULT_FOCUS_MINUTES);
+    setTaskRetainIncompleteRecordsInput(true);
     setTaskColorInput(DEFAULT_TASK_COLOR);
     setIsCreatingTask(false);
   };
@@ -1236,10 +1367,8 @@ function MainApp() {
                     <span>
                       <b>{task.text}</b>
                       <small>
-                        {task.type === "countup"
-                          ? "正计时"
-                          : `番茄钟 · ${task.focusMinutes ?? DEFAULT_FOCUS_MINUTES}/${task.breakMinutes ?? DEFAULT_BREAK_MINUTES} 分钟`}{" "}
-                        · {formatDuration(task.focusSeconds)}
+                        {getTaskDescription(task)} ·{" "}
+                        {formatDuration(task.focusSeconds)}
                       </small>
                     </span>
                   </button>
@@ -1271,13 +1400,27 @@ function MainApp() {
                 aria-label="任务名称"
               />
               <select
+                value={taskKindInput}
+                onChange={(event) =>
+                  setTaskKindInput(event.target.value as TaskKind)
+                }
+                aria-label="任务类型"
+              >
+                <option value="pomodoro">普通番茄钟</option>
+                <option value="habit">养习惯</option>
+              </select>
+              <select
                 value={taskTypeInput}
                 onChange={(event) =>
                   setTaskTypeInput(event.target.value as TaskType)
                 }
               >
-                <option value="pomodoro">番茄钟</option>
-                <option value="countup">正计时 · 自由记录</option>
+                <option value="pomodoro">
+                  {taskKindInput === "habit" ? "倒计时" : "番茄钟 · 倒计时"}
+                </option>
+                <option value="countup">
+                  {taskKindInput === "habit" ? "正计时" : "正计时 · 自由记录"}
+                </option>
               </select>
               <div className="new-task-color-field">
                 <span>任务颜色</span>
@@ -1301,7 +1444,58 @@ function MainApp() {
                   ))}
                 </div>
               </div>
-              {taskTypeInput === "pomodoro" && (
+              {taskKindInput === "habit" ? (
+                <>
+                  <div className="habit-goal-fields">
+                    <label>
+                      周期
+                      <select
+                        value={taskHabitPeriodInput}
+                        onChange={(event) =>
+                          setTaskHabitPeriodInput(
+                            event.target.value as HabitPeriod,
+                          )
+                        }
+                      >
+                        <option value="day">每天</option>
+                        <option value="week">每周</option>
+                        <option value="month">每月</option>
+                      </select>
+                    </label>
+                    <label>
+                      目标
+                      <input
+                        type="number"
+                        min={MIN_TIMER_MINUTES}
+                        max={MAX_TIMER_MINUTES}
+                        value={taskHabitTargetMinutesInput}
+                        onChange={(event) =>
+                          setTaskHabitTargetMinutesInput(
+                            Math.max(
+                              MIN_TIMER_MINUTES,
+                              Number(event.target.value),
+                            ),
+                          )
+                        }
+                        aria-label="习惯目标时长（分钟）"
+                      />
+                      分钟
+                    </label>
+                  </div>
+                  <label className="habit-record-option">
+                    <input
+                      type="checkbox"
+                      checked={taskRetainIncompleteRecordsInput}
+                      onChange={(event) =>
+                        setTaskRetainIncompleteRecordsInput(
+                          event.target.checked,
+                        )
+                      }
+                    />
+                    未完成时保留本次记录
+                  </label>
+                </>
+              ) : (
                 <div className="task-duration-fields">
                   <label>
                     专注
@@ -1351,7 +1545,7 @@ function MainApp() {
                 disabled={!taskInput.trim()}
               >
                 <Plus size={16} />
-                创建专注任务
+                创建任务
               </button>
               <button className="text-button" onClick={cancelTaskCreation}>
                 取消
@@ -1363,11 +1557,13 @@ function MainApp() {
             className="new-task-button"
             onClick={() => {
               setTaskColorInput(DEFAULT_TASK_COLOR);
+              setTaskKindInput("pomodoro");
+              setTaskTypeInput("pomodoro");
               setIsCreatingTask(true);
             }}
           >
             <Plus size={18} />
-            新建专注任务
+            新建任务
           </button>
         )}
       </div>
@@ -1519,12 +1715,20 @@ function MainApp() {
           )}
           editText={taskEditText}
           setEditText={setTaskEditText}
+          editKind={taskEditKind}
+          setEditKind={setTaskEditKind}
           editType={taskEditType}
           setEditType={setTaskEditType}
           editFocusMinutes={taskEditFocusMinutes}
           setEditFocusMinutes={setTaskEditFocusMinutes}
           editBreakMinutes={taskEditBreakMinutes}
           setEditBreakMinutes={setTaskEditBreakMinutes}
+          editHabitPeriod={taskEditHabitPeriod}
+          setEditHabitPeriod={setTaskEditHabitPeriod}
+          editHabitTargetMinutes={taskEditHabitTargetMinutes}
+          setEditHabitTargetMinutes={setTaskEditHabitTargetMinutes}
+          editRetainIncompleteRecords={taskEditRetainIncompleteRecords}
+          setEditRetainIncompleteRecords={setTaskEditRetainIncompleteRecords}
           isEditing={isEditingTask}
           setIsEditing={setIsEditingTask}
           choosingColor={isChoosingTaskColor}
@@ -1547,12 +1751,20 @@ function TaskDetailsDialog({
   sessions,
   editText,
   setEditText,
+  editKind,
+  setEditKind,
   editType,
   setEditType,
   editFocusMinutes,
   setEditFocusMinutes,
   editBreakMinutes,
   setEditBreakMinutes,
+  editHabitPeriod,
+  setEditHabitPeriod,
+  editHabitTargetMinutes,
+  setEditHabitTargetMinutes,
+  editRetainIncompleteRecords,
+  setEditRetainIncompleteRecords,
   isEditing,
   setIsEditing,
   choosingColor,
@@ -1569,12 +1781,20 @@ function TaskDetailsDialog({
   sessions: FocusSession[];
   editText: string;
   setEditText: Dispatch<SetStateAction<string>>;
+  editKind: TaskKind;
+  setEditKind: Dispatch<SetStateAction<TaskKind>>;
   editType: TaskType;
   setEditType: Dispatch<SetStateAction<TaskType>>;
   editFocusMinutes: number;
   setEditFocusMinutes: Dispatch<SetStateAction<number>>;
   editBreakMinutes: number;
   setEditBreakMinutes: Dispatch<SetStateAction<number>>;
+  editHabitPeriod: HabitPeriod;
+  setEditHabitPeriod: Dispatch<SetStateAction<HabitPeriod>>;
+  editHabitTargetMinutes: number;
+  setEditHabitTargetMinutes: Dispatch<SetStateAction<number>>;
+  editRetainIncompleteRecords: boolean;
+  setEditRetainIncompleteRecords: Dispatch<SetStateAction<boolean>>;
   isEditing: boolean;
   setIsEditing: Dispatch<SetStateAction<boolean>>;
   choosingColor: boolean;
@@ -1610,7 +1830,9 @@ function TaskDetailsDialog({
           <div className="task-dialog-title-wrap">
             <span className="central-task-mark" />
             <div>
-              <span className="section-kicker">专注任务</span>
+              <span className="section-kicker">
+                {getTaskKind(task) === "habit" ? "养习惯" : "普通番茄钟"}
+              </span>
               {isEditing ? (
                 <input
                   autoFocus
@@ -1634,6 +1856,18 @@ function TaskDetailsDialog({
         {isEditing && (
           <div className="task-edit-fields">
             <label className="task-type-field">
+              任务类型
+              <select
+                value={editKind}
+                onChange={(event) =>
+                  setEditKind(event.target.value as TaskKind)
+                }
+              >
+                <option value="pomodoro">普通番茄钟</option>
+                <option value="habit">养习惯</option>
+              </select>
+            </label>
+            <label className="task-type-field">
               计时方式
               <select
                 value={editType}
@@ -1645,7 +1879,47 @@ function TaskDetailsDialog({
                 <option value="countup">正计时</option>
               </select>
             </label>
-            {editType === "pomodoro" && (
+            {editKind === "habit" ? (
+              <>
+                <label className="task-type-field">
+                  完成周期
+                  <select
+                    value={editHabitPeriod}
+                    onChange={(event) =>
+                      setEditHabitPeriod(event.target.value as HabitPeriod)
+                    }
+                  >
+                    <option value="day">每天</option>
+                    <option value="week">每周</option>
+                    <option value="month">每月</option>
+                  </select>
+                </label>
+                <label className="task-type-field">
+                  目标时长（分钟）
+                  <input
+                    type="number"
+                    min={MIN_TIMER_MINUTES}
+                    max={MAX_TIMER_MINUTES}
+                    value={editHabitTargetMinutes}
+                    onChange={(event) =>
+                      setEditHabitTargetMinutes(
+                        Math.max(MIN_TIMER_MINUTES, Number(event.target.value)),
+                      )
+                    }
+                  />
+                </label>
+                <label className="habit-record-option">
+                  <input
+                    type="checkbox"
+                    checked={editRetainIncompleteRecords}
+                    onChange={(event) =>
+                      setEditRetainIncompleteRecords(event.target.checked)
+                    }
+                  />
+                  未完成时保留本次记录
+                </label>
+              </>
+            ) : editType === "pomodoro" ? (
               <>
                 <label className="task-type-field">
                   专注时长（分钟）
@@ -1676,7 +1950,7 @@ function TaskDetailsDialog({
                   />
                 </label>
               </>
-            )}
+            ) : null}
           </div>
         )}
         <div className="task-detail-metrics">
@@ -1758,12 +2032,20 @@ function TaskDetailsDialog({
                   title="编辑任务"
                   onClick={() => {
                     setEditText(task.text);
+                    setEditKind(getTaskKind(task));
                     setEditType(task.type);
                     setEditFocusMinutes(
                       task.focusMinutes ?? DEFAULT_FOCUS_MINUTES,
                     );
                     setEditBreakMinutes(
                       task.breakMinutes ?? DEFAULT_BREAK_MINUTES,
+                    );
+                    setEditHabitPeriod(task.habitPeriod ?? "day");
+                    setEditHabitTargetMinutes(
+                      task.habitTargetMinutes ?? DEFAULT_FOCUS_MINUTES,
+                    );
+                    setEditRetainIncompleteRecords(
+                      task.retainIncompleteRecords !== false,
                     );
                     setIsEditing(true);
                   }}
@@ -1993,7 +2275,11 @@ function TimerView(props: TimerViewProps) {
                 <div className="section-kicker">
                   <span>
                     {isCountup ? <Timer size={15} /> : <Clock3 size={15} />}
-                    {isCountup ? "正计时时钟" : "专注时钟"}
+                    {getTaskKind(selectedTask) === "habit"
+                      ? "养习惯"
+                      : isCountup
+                        ? "正计时时钟"
+                        : "专注时钟"}
                     <button
                       className="active-task-label"
                       onClick={() => openTaskDetails(selectedTask)}
@@ -2032,9 +2318,13 @@ function TimerView(props: TimerViewProps) {
                   <div className="timer-content">
                     <span>
                       {isCountup
-                        ? "正计时"
+                        ? getTaskKind(selectedTask) === "habit"
+                          ? "养习惯 · 正计时"
+                          : "正计时"
                         : mode === "focus"
-                          ? "专注中"
+                          ? getTaskKind(selectedTask) === "habit"
+                            ? "养习惯 · 倒计时"
+                            : "专注中"
                           : "休息中"}
                     </span>
                     <b className="timer-task-name">{selectedTask.text}</b>
@@ -2050,14 +2340,22 @@ function TimerView(props: TimerViewProps) {
                     className="primary-button"
                     aria-label={isRunning ? "暂停计时" : "开始计时"}
                     onClick={toggleTimer}
-                    disabled={!isCountup && remaining === 0}
+                    disabled={
+                      (!isCountup && remaining === 0) ||
+                      (isHabit && elapsed >= totalSeconds)
+                    }
                   >
                     {isRunning ? (
                       <Pause size={17} />
                     ) : (
                       <Play size={17} fill="currentColor" />
                     )}
-                    {isRunning ? "暂停" : remaining === 0 ? "已完成" : "继续"}
+                    {isRunning
+                      ? "暂停"
+                      : (!isCountup && remaining === 0) ||
+                          (isHabit && elapsed >= totalSeconds)
+                        ? "已完成"
+                        : "继续"}
                   </button>
                   <button
                     className="secondary-button abandon-button"
