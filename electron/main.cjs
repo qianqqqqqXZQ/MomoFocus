@@ -44,6 +44,12 @@ function resizeFloatingWindow(expanded) {
   return true;
 }
 
+function keepFloatingWindowVisible() {
+  if (!floatingWindow || floatingWindow.isDestroyed()) return;
+  floatingWindow.setAlwaysOnTop(true, "floating");
+  floatingWindow.showInactive();
+}
+
 ipcMain.handle("momofocus:open-floating-window", () => {
   if (floatingWindow && !floatingWindow.isDestroyed()) {
     resizeFloatingWindow(false);
@@ -63,6 +69,8 @@ ipcMain.handle("momofocus:open-floating-window", () => {
     maxHeight: 78,
     title: "番茄小窝 · 专注浮窗",
     icon: iconPath,
+    parent: null,
+    modal: false,
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: true,
@@ -199,9 +207,10 @@ function createWindow() {
     closeFloatingWindow();
   });
   window.on("minimize", () => {
-    if (!floatingWindow || floatingWindow.isDestroyed()) return;
-    floatingWindow.setAlwaysOnTop(true, "floating");
-    floatingWindow.showInactive();
+    keepFloatingWindowVisible();
+  });
+  window.on("hide", () => {
+    keepFloatingWindowVisible();
   });
 }
 

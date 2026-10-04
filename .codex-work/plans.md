@@ -282,3 +282,12 @@
 - [x] 让右上角今日专注数量直接跟随当天专注历史记录新增和删除更新。
 - [x] 将少于 5 秒的原生弹窗替换为页面顶部绿色提示，并在 5 秒内自动收起。
 - [x] 运行格式检查、构建、空白检查和浏览器运行态检查，完成计时生命周期 code review。
+
+## 浮窗独立于主窗口最小化
+
+- [x] 创建改动前 Git 检查点提交 `ae4ccc3`。
+- [x] 显式将计时浮窗声明为无父窗口、非模态的独立顶层窗口。
+- [x] 主窗口最小化或隐藏时重新置顶并保持浮窗可见。
+- [x] 运行 `npm run build`、`node --check electron/main.cjs`、`node --check electron/preload.cjs` 和 `git diff --check`。
+- [x] 完成 Electron 窗口生命周期、关闭清理和 IPC 依赖的 code review。
+- [x] 针对本次 Electron 文件运行 Prettier 检查；全量 `npm run format:check` 仍受用户并行修改的 `src/App.tsx` 既有格式差异影响。

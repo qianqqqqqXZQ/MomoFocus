@@ -107,6 +107,8 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 
 ## 打包与资源约定
 
+- 2026-10-04：再次强化浮窗独立窗口语义，显式设置 `parent: null` 和 `modal: false`，并在主窗口 `minimize` / `hide` 时统一调用 `keepFloatingWindowVisible()`，保证主窗口最小化或隐藏后浮窗仍保持置顶可见；主窗口关闭仍会清理浮窗。`npm run build`、Electron 主进程语法检查和 `git diff --check` 通过，针对本次 Electron 文件的 Prettier 检查通过。全量 `npm run format:check` 因用户并行修改的 `src/App.tsx` 既有格式差异未通过。
+
 - Windows 安装包、快捷方式、卸载器和 Electron 主窗口统一使用 `assets/tomato.ico`。
 - Electron 主进程通过 `app.getAppPath()` 定位打包后的 `assets/tomato.ico`，避免依赖开发目录层级。
 - `release/` 是唯一标准打包输出目录；`release-*` 目录均视为历史临时产物，不纳入版本控制。
