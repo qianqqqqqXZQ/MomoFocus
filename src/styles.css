@@ -33,7 +33,7 @@ body.floating-window,
 body.floating-window #root {
   width: 78px;
   min-width: 78px;
-  max-width: 390px;
+  max-width: 378px;
   height: 78px;
   min-height: 78px;
   margin: 0;
@@ -44,7 +44,7 @@ body.floating-window #root {
 html.floating-window.floating-expanded,
 body.floating-window.floating-expanded,
 body.floating-window.floating-expanded #root {
-  width: 390px;
+  width: 378px;
   height: 78px;
 }
 html.floating-window {
@@ -62,7 +62,7 @@ body.floating-window .floating-timer-shell {
   height: 78px;
 }
 body.floating-window .floating-timer-shell.is-expanded {
-  width: 390px;
+  width: 378px;
   height: 78px;
 }
 .floating-timer-shell {
@@ -77,7 +77,7 @@ body.floating-window .floating-timer-shell.is-expanded {
   color: var(--ink);
   user-select: none;
   -webkit-app-region: drag;
-  transition: width 0.18s ease;
+  transition: width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .floating-timer-orb {
   position: relative;
@@ -145,8 +145,8 @@ body.floating-window .floating-timer-shell.is-expanded {
   opacity: 0;
   transform: translateX(-7px);
   transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
+    opacity 0.22s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
   -webkit-app-region: no-drag;
 }

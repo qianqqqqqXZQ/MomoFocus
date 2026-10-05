@@ -4,6 +4,10 @@ const path = require("node:path");
 let mainWindow = null;
 let floatingWindow = null;
 let floatingDrag = null;
+let floatingResizeTimer = null;
+
+const FLOATING_COLLAPSED_WIDTH = 78;
+const FLOATING_EXPANDED_WIDTH = 378;
 
 app.setAppUserModelId("com.momofocus.app");
 
@@ -22,6 +26,10 @@ ipcMain.handle("momofocus:notify", (_event, payload) => {
 });
 
 function closeFloatingWindow() {
+  if (floatingResizeTimer) {
+    clearTimeout(floatingResizeTimer);
+    floatingResizeTimer = null;
+  }
   if (floatingWindow && !floatingWindow.isDestroyed()) floatingWindow.close();
   floatingWindow = null;
   floatingDrag = null;
@@ -38,9 +46,31 @@ function isFloatingSender(event) {
 function resizeFloatingWindow(expanded) {
   if (!floatingWindow || floatingWindow.isDestroyed()) return false;
   const { x, y } = floatingWindow.getBounds();
-  const width = expanded ? 390 : 78;
-  floatingWindow.setContentSize(width, 78, false);
-  floatingWindow.setPosition(x, y, false);
+  const targetWidth = expanded
+    ? FLOATING_EXPANDED_WIDTH
+    : FLOATING_COLLAPSED_WIDTH;
+  const [startWidth] = floatingWindow.getContentSize();
+  if (floatingResizeTimer) clearTimeout(floatingResizeTimer);
+
+  const startedAt = Date.now();
+  const duration = 220;
+  const tick = () => {
+    if (!floatingWindow || floatingWindow.isDestroyed()) {
+      floatingResizeTimer = null;
+      return;
+    }
+    const progress = Math.min(1, (Date.now() - startedAt) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const width = Math.round(startWidth + (targetWidth - startWidth) * eased);
+    floatingWindow.setContentSize(width, 78, false);
+    floatingWindow.setPosition(x, y, false);
+    if (progress < 1) {
+      floatingResizeTimer = setTimeout(tick, 16);
+    } else {
+      floatingResizeTimer = null;
+    }
+  };
+  tick();
   return true;
 }
 
@@ -65,7 +95,7 @@ ipcMain.handle("momofocus:open-floating-window", () => {
     height: 78,
     minWidth: 78,
     minHeight: 78,
-    maxWidth: 390,
+    maxWidth: FLOATING_EXPANDED_WIDTH,
     maxHeight: 78,
     title: "番茄小窝 · 专注浮窗",
     icon: iconPath,

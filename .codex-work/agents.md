@@ -94,6 +94,8 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 
 ## 最近验证补充
 
+- 2026-10-05：正计时主计时器与浮窗不再显示进度弧（仅保留中性轨道）；浮窗展开宽度统一为 378px，匹配 78px 圆形主体、8px 间距和 292px 详情区，修复右侧多余空白；Electron 原生窗口和页面同步使用 220ms 缓动展开/收起。`npm run format:check`、`npm run build`、`git diff --check`、`node --check electron/main.cjs` 通过；复核了计时类型分支、浮窗尺寸和重复触发时动画计时器清理。
+
 - 2026-10-05：将 `npm run dev` 的 `http://127.0.0.1:5173` localStorage 数据迁移到桌面包的 `file://` 来源；`momofocus.sessions`、`quickNotes`、`timer`、`slogan`、`tasks`、`settings`、`notes`、`todos` 8 个键逐项写入并校验一致，桌面 exe 独立读取验证通过。
 
 - 2026-10-05：确认桌面快捷方式原先指向 9 月旧版 `C:\Users\asus\AppData\Local\Programs\momofocus\番茄小窝.exe`，重新生成当前 `release/win-unpacked` 后更新桌面安装目录并重建快捷方式；保留 `AppData\Roaming\番茄小窝` 本地记录，避免误清空用户数据。

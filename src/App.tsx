@@ -477,16 +477,18 @@ function FloatingTimer() {
             cy="39"
             r="31"
           />
-          <circle
-            className={`floating-timer-ring-progress ${isRunning ? "is-running" : ""}`}
-            cx="39"
-            cy="39"
-            r="31"
-            style={{
-              strokeDasharray: circumference,
-              strokeDashoffset: circumference * (1 - progress),
-            }}
-          />
+          {!isCountup && (
+            <circle
+              className={`floating-timer-ring-progress ${isRunning ? "is-running" : ""}`}
+              cx="39"
+              cy="39"
+              r="31"
+              style={{
+                strokeDasharray: circumference,
+                strokeDashoffset: circumference * (1 - progress),
+              }}
+            />
+          )}
         </svg>
         <span className="floating-timer-tomato">
           <TomatoIcon />
@@ -2322,16 +2324,18 @@ function TimerView(props: TimerViewProps) {
                       cy="150"
                       r={radius}
                     />
-                    <circle
-                      className="ring-progress"
-                      cx="150"
-                      cy="150"
-                      r={radius}
-                      style={{
-                        strokeDasharray: circumference,
-                        strokeDashoffset: circumference * (1 - progress),
-                      }}
-                    />
+                    {!isCountup && (
+                      <circle
+                        className="ring-progress"
+                        cx="150"
+                        cy="150"
+                        r={radius}
+                        style={{
+                          strokeDasharray: circumference,
+                          strokeDashoffset: circumference * (1 - progress),
+                        }}
+                      />
+                    )}
                   </svg>
                   <div className="timer-content">
                     <span>
