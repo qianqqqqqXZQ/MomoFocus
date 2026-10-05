@@ -94,6 +94,8 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 
 ## 最近验证补充
 
+- 2026-10-05：将 `npm run dev` 的 `http://127.0.0.1:5173` localStorage 数据迁移到桌面包的 `file://` 来源；`momofocus.sessions`、`quickNotes`、`timer`、`slogan`、`tasks`、`settings`、`notes`、`todos` 8 个键逐项写入并校验一致，桌面 exe 独立读取验证通过。
+
 - 2026-10-05：确认桌面快捷方式原先指向 9 月旧版 `C:\Users\asus\AppData\Local\Programs\momofocus\番茄小窝.exe`，重新生成当前 `release/win-unpacked` 后更新桌面安装目录并重建快捷方式；保留 `AppData\Roaming\番茄小窝` 本地记录，避免误清空用户数据。
 
 - 2026-10-05：修正创建任务选择正计时时仍显示专注/休息时长的问题；普通正计时创建表单隐藏两个时长输入，并将无关时长保存为默认值，养习惯任务仍保留目标时长。`npm run format:check`、`npm run build`、`git diff --check` 通过；独立来源浏览器运行态确认正计时切换后两个输入从无障碍树移除，且无 error/warn 日志，完成表单条件渲染与数据保存 code review。
