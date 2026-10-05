@@ -1254,8 +1254,14 @@ function MainApp() {
         done: false,
         kind: taskKindInput,
         type: taskTypeInput,
-        focusMinutes: taskFocusMinutesInput,
-        breakMinutes: taskBreakMinutesInput,
+        focusMinutes:
+          taskTypeInput === "pomodoro"
+            ? taskFocusMinutesInput
+            : DEFAULT_FOCUS_MINUTES,
+        breakMinutes:
+          taskTypeInput === "pomodoro"
+            ? taskBreakMinutesInput
+            : DEFAULT_BREAK_MINUTES,
         habitPeriod: taskHabitPeriodInput,
         habitTargetMinutes: taskHabitTargetMinutesInput,
         color: taskColorInput,
@@ -1477,7 +1483,7 @@ function MainApp() {
                     </label>
                   </div>
                 </>
-              ) : (
+              ) : taskTypeInput === "pomodoro" ? (
                 <div className="task-duration-fields">
                   <label>
                     专注
@@ -1518,7 +1524,7 @@ function MainApp() {
                     分钟
                   </label>
                 </div>
-              )}
+              ) : null}
             </div>
             <div className="new-task-actions">
               <button
