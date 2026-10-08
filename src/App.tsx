@@ -317,7 +317,9 @@ function FloatingTimer() {
   const [taskName, setTaskName] = useState("专注任务");
   const [tasks, setTasks] = useState<FocusTask[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
+  const expandedRef = useRef(false);
   const collapseTimerRef = useRef<number | null>(null);
+  const viewportCollapseTimerRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
   const dragMovedRef = useRef(false);
 
@@ -360,6 +362,8 @@ function FloatingTimer() {
     return () => {
       if (collapseTimerRef.current)
         window.clearTimeout(collapseTimerRef.current);
+      if (viewportCollapseTimerRef.current)
+        window.clearTimeout(viewportCollapseTimerRef.current);
       document.documentElement.classList.remove("floating-window");
       document.documentElement.classList.remove("floating-expanded");
       document.body.classList.remove("floating-window");
@@ -433,9 +437,21 @@ function FloatingTimer() {
       window.clearTimeout(collapseTimerRef.current);
       collapseTimerRef.current = null;
     }
+    if (expandedRef.current === expanded) return;
+    expandedRef.current = expanded;
+    if (viewportCollapseTimerRef.current) {
+      window.clearTimeout(viewportCollapseTimerRef.current);
+      viewportCollapseTimerRef.current = null;
+    }
     setIsExpanded(expanded);
-    document.documentElement.classList.toggle("floating-expanded", expanded);
-    document.body.classList.toggle("floating-expanded", expanded);
+    const updateViewport = () => {
+      document.documentElement.classList.toggle("floating-expanded", expanded);
+      document.body.classList.toggle("floating-expanded", expanded);
+      viewportCollapseTimerRef.current = null;
+    };
+    if (expanded) updateViewport();
+    else
+      viewportCollapseTimerRef.current = window.setTimeout(updateViewport, 180);
     void (expanded
       ? window.momoFocusNative?.expandFloatingWindow()
       : window.momoFocusNative?.collapseFloatingWindow());
@@ -497,6 +513,8 @@ function FloatingTimer() {
       <section
         className="floating-timer-details"
         onMouseEnter={handleMouseEnter}
+        aria-hidden={!isExpanded}
+        inert={!isExpanded ? "" : undefined}
       >
         <div className="floating-timer-summary">
           <div className="floating-timer-status">
@@ -505,8 +523,11 @@ function FloatingTimer() {
           </div>
           <strong>{formatTime(liveSeconds)}</strong>
         </div>
-        <span className="floating-timer-task" title={taskName}>
-          {task ? getTaskDescription(task) : taskName}
+        <span
+          className="floating-timer-task"
+          title={task ? `${taskName} · ${getTaskDescription(task)}` : taskName}
+        >
+          {taskName}
         </span>
         <div className="floating-timer-actions">
           <button

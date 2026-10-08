@@ -5,6 +5,7 @@ let mainWindow = null;
 let floatingWindow = null;
 let floatingDrag = null;
 let floatingResizeTimer = null;
+let floatingExpanded = false;
 
 const FLOATING_COLLAPSED_WIDTH = 78;
 const FLOATING_EXPANDED_WIDTH = 378;
@@ -45,32 +46,21 @@ function isFloatingSender(event) {
 
 function resizeFloatingWindow(expanded) {
   if (!floatingWindow || floatingWindow.isDestroyed()) return false;
-  const { x, y } = floatingWindow.getBounds();
+  if (floatingExpanded === expanded) return true;
+  floatingExpanded = expanded;
   const targetWidth = expanded
     ? FLOATING_EXPANDED_WIDTH
     : FLOATING_COLLAPSED_WIDTH;
-  const [startWidth] = floatingWindow.getContentSize();
   if (floatingResizeTimer) clearTimeout(floatingResizeTimer);
-
-  const startedAt = Date.now();
-  const duration = 220;
-  const tick = () => {
-    if (!floatingWindow || floatingWindow.isDestroyed()) {
-      floatingResizeTimer = null;
-      return;
-    }
-    const progress = Math.min(1, (Date.now() - startedAt) / duration);
-    const eased = 1 - Math.pow(1 - progress, 3);
-    const width = Math.round(startWidth + (targetWidth - startWidth) * eased);
-    floatingWindow.setContentSize(width, 78, false);
-    floatingWindow.setPosition(x, y, false);
-    if (progress < 1) {
-      floatingResizeTimer = setTimeout(tick, 16);
-    } else {
-      floatingResizeTimer = null;
-    }
+  floatingResizeTimer = null;
+  const applySize = () => {
+    floatingResizeTimer = null;
+    if (!floatingWindow || floatingWindow.isDestroyed()) return;
+    floatingWindow.setContentSize(targetWidth, 78, false);
   };
-  tick();
+  // Give the renderer room before showing the card; shrink after it fades out.
+  if (expanded) applySize();
+  else floatingResizeTimer = setTimeout(applySize, 180);
   return true;
 }
 
@@ -82,7 +72,6 @@ function keepFloatingWindowVisible() {
 
 ipcMain.handle("momofocus:open-floating-window", () => {
   if (floatingWindow && !floatingWindow.isDestroyed()) {
-    resizeFloatingWindow(false);
     floatingWindow.setAlwaysOnTop(true, "floating");
     floatingWindow.show();
     floatingWindow.focus();
@@ -90,6 +79,7 @@ ipcMain.handle("momofocus:open-floating-window", () => {
   }
 
   const iconPath = path.join(app.getAppPath(), "assets", "tomato.ico");
+  floatingExpanded = false;
   floatingWindow = new BrowserWindow({
     width: 78,
     height: 78,
@@ -119,6 +109,10 @@ ipcMain.handle("momofocus:open-floating-window", () => {
   floatingWindow.setAlwaysOnTop(true, "floating");
 
   floatingWindow.on("closed", () => {
+    if (floatingResizeTimer) clearTimeout(floatingResizeTimer);
+    floatingResizeTimer = null;
+    floatingExpanded = false;
+    floatingDrag = null;
     floatingWindow = null;
   });
   floatingWindow.webContents.on("context-menu", (event) => {
@@ -142,12 +136,14 @@ ipcMain.handle("momofocus:open-floating-window", () => {
   return true;
 });
 
-ipcMain.handle("momofocus:expand-floating-window", () =>
-  resizeFloatingWindow(true),
+ipcMain.handle(
+  "momofocus:expand-floating-window",
+  (event) => isFloatingSender(event) && resizeFloatingWindow(true),
 );
 
-ipcMain.handle("momofocus:collapse-floating-window", () =>
-  resizeFloatingWindow(false),
+ipcMain.handle(
+  "momofocus:collapse-floating-window",
+  (event) => isFloatingSender(event) && resizeFloatingWindow(false),
 );
 
 ipcMain.handle("momofocus:floating-command", (event, command) => {

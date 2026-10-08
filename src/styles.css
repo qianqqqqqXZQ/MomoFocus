@@ -58,7 +58,7 @@ body.floating-window #root {
   display: block;
 }
 body.floating-window .floating-timer-shell {
-  width: 78px;
+  width: 378px;
   height: 78px;
 }
 body.floating-window .floating-timer-shell.is-expanded {
@@ -72,12 +72,10 @@ body.floating-window .floating-timer-shell.is-expanded {
   align-items: center;
   gap: 8px;
   overflow: hidden;
-  border-radius: 39px;
-  background: rgba(255, 253, 249, 0.96);
+  background: transparent;
   color: var(--ink);
   user-select: none;
-  -webkit-app-region: drag;
-  transition: width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  -webkit-app-region: no-drag;
 }
 .floating-timer-orb {
   position: relative;
@@ -88,7 +86,6 @@ body.floating-window .floating-timer-shell.is-expanded {
   border: 0;
   border-radius: 50%;
   background: var(--paper);
-  box-shadow: 0 7px 19px rgba(73, 101, 97, 0.2);
   -webkit-app-region: no-drag;
 }
 .floating-timer-ring {
@@ -135,24 +132,24 @@ body.floating-window .floating-timer-shell.is-expanded {
   height: 78px;
   flex: 0 0 292px;
   display: grid;
-  grid-template-rows: 16px 16px 24px;
-  gap: 2px;
-  padding: 6px 16px 6px 10px;
-  border: 1px solid rgba(240, 211, 198, 0.86);
+  grid-template-rows: 20px 16px 24px;
+  gap: 3px;
+  padding: 5px 14px;
+  border: 1px solid #e6e7df;
   border-radius: 18px;
-  background: rgba(255, 250, 242, 0.96);
-  box-shadow: 0 7px 18px rgba(121, 101, 90, 0.13);
+  background: #fffdf9;
   opacity: 0;
-  transform: translateX(-7px);
+  transform: translateX(-6px) scale(0.98);
+  transform-origin: left center;
   transition:
-    opacity 0.22s ease,
-    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
   -webkit-app-region: no-drag;
 }
 .floating-timer-shell.is-expanded .floating-timer-details {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateX(0) scale(1);
   pointer-events: auto;
 }
 .floating-timer-summary {
@@ -179,7 +176,7 @@ body.floating-window .floating-timer-shell.is-expanded {
 .floating-timer-details strong {
   color: var(--ink);
   font:
-    500 22px "DM Mono",
+    500 20px "DM Mono",
     monospace;
   line-height: 1;
 }
@@ -195,9 +192,14 @@ body.floating-window .floating-timer-shell.is-expanded {
 }
 .floating-timer-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   align-items: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .floating-timer-details {
+    transition: none;
+  }
 }
 .floating-timer-actions button {
   display: inline-flex;

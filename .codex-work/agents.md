@@ -94,6 +94,8 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 
 ## 最近验证补充
 
+- 2026-10-08：修复番茄计时浮窗的卡顿和中间米白连接块。外层保持透明，圆形番茄与独立圆角详情卡之间保留 8px 透明间距，移除被 78px 窗口裁切的外阴影；详情显示任务名，悬停提示保留任务类型/时长。取消每 16ms 调整 Electron 尺寸/位置，改为展开时一次扩宽、180ms 内容淡出结束后一次收窄，重复悬停去重且重新进入取消收起；隐藏详情使用 inert 和 aria-hidden。`npm run format:check`、`npm run build`、`git diff --check`、主进程/preload 语法检查通过。浏览器运行态确认展开/收起、透明背景、78 + 8 + 292px 布局、内容无溢出和隐藏按钮不可访问；主进程模拟检查确认来源校验、重复请求、收起期间重新进入、关闭清理和重开。完成计时/持久化兼容、拖动与定时器生命周期 code review。浏览器无法验证 Windows 透明原生窗口合成效果，独立桌面包尚未重新打包。
+
 - 2026-10-05：正计时主计时器与浮窗不再显示进度弧（仅保留中性轨道）；浮窗展开宽度统一为 378px，匹配 78px 圆形主体、8px 间距和 292px 详情区，修复右侧多余空白；Electron 原生窗口和页面同步使用 220ms 缓动展开/收起。`npm run format:check`、`npm run build`、`git diff --check`、`node --check electron/main.cjs` 通过；复核了计时类型分支、浮窗尺寸和重复触发时动画计时器清理。
 
 - 2026-10-05：将 `npm run dev` 的 `http://127.0.0.1:5173` localStorage 数据迁移到桌面包的 `file://` 来源；`momofocus.sessions`、`quickNotes`、`timer`、`slogan`、`tasks`、`settings`、`notes`、`todos` 8 个键逐项写入并校验一致，桌面 exe 独立读取验证通过。
