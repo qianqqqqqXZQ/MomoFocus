@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import { SortableList } from "./SortableList";
 import {
   ArrowLeft,
   BarChart3,
@@ -1326,6 +1327,7 @@ function MainApp() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
+      if (event.defaultPrevented || target.closest(".sort-handle")) return;
       if (event.key === "Escape" && taskDetailsId !== null) {
         setTaskDetailsId(null);
         return;
@@ -2715,21 +2717,29 @@ function RightPanel({
                 <h2>把日常留在这里。</h2>
               </div>
             </div>
-            <div className="task-list todo-list">
-              {todos.map((todo) => (
-                <div
-                  className={`task-row todo-row ${todo.done ? "is-done" : ""} ${selectedTodoId === todo.id ? "is-selected" : ""}`}
-                  key={todo.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => selectTodo(todo)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      selectTodo(todo);
-                    }
-                  }}
-                >
+            <SortableList
+              items={todos}
+              setItems={setTodos}
+              label="Todo 列表"
+              className="task-list todo-list"
+              itemLabel={(todo) => todo.text}
+              isDisabled={(todo) => editingTodoId === todo.id}
+              rowProps={(todo) => ({
+                className: `task-row todo-row ${todo.done ? "is-done" : ""} ${selectedTodoId === todo.id ? "is-selected" : ""}`,
+                role: "button",
+                tabIndex: 0,
+                onClick: () => selectTodo(todo),
+                onKeyDown: (event) => {
+                  if (event.target !== event.currentTarget) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    selectTodo(todo);
+                  }
+                },
+              })}
+              renderItem={(todo, dragHandle) => (
+                <>
+                  {dragHandle}
                   <button
                     className="check-button"
                     aria-label={
@@ -2795,9 +2805,9 @@ function RightPanel({
                   >
                     <Trash2 size={15} />
                   </button>
-                </div>
-              ))}
-            </div>
+                </>
+              )}
+            />
             <div className="add-task todo-add">
               <Plus size={16} />
               <input
@@ -2881,21 +2891,29 @@ function RightPanel({
                   新建
                 </button>
               </div>
-              <div className="memo-list" role="listbox" aria-label="备忘录列表">
-                {memoNotes.map((note) => (
-                  <button
-                    key={note.id}
-                    role="option"
-                    aria-selected={selectedMemoId === note.id}
-                    className={`memo-list-item ${selectedMemoId === note.id ? "active" : ""}`}
-                    onClick={() => setSelectedMemoId(note.id)}
-                  >
-                    <strong>{note.title || "无标题"}</strong>
-                    <span>{note.body || "暂无内容"}</span>
-                    <time>{noteTime(note.updatedAt)}</time>
-                  </button>
-                ))}
-              </div>
+              <SortableList
+                items={memoNotes}
+                setItems={setMemoNotes}
+                label="备忘录列表"
+                className="memo-list"
+                itemLabel={(note) => note.title || "无标题"}
+                rowProps={() => ({ className: "memo-sortable-row" })}
+                renderItem={(note, dragHandle) => (
+                  <>
+                    {dragHandle}
+                    <button
+                      type="button"
+                      aria-pressed={selectedMemoId === note.id}
+                      className={`memo-list-item ${selectedMemoId === note.id ? "active" : ""}`}
+                      onClick={() => setSelectedMemoId(note.id)}
+                    >
+                      <strong>{note.title || "无标题"}</strong>
+                      <span>{note.body || "暂无内容"}</span>
+                      <time>{noteTime(note.updatedAt)}</time>
+                    </button>
+                  </>
+                )}
+              />
             </div>
             <div className="memo-editor-pane">
               {selectedMemo ? (

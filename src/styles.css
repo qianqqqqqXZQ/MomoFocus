@@ -2622,6 +2622,72 @@ textarea::placeholder {
 .todo-list {
   margin-top: 0;
 }
+.sortable-row {
+  position: relative;
+}
+.sort-handle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 30px;
+  padding: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #b9beb8;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.sort-handle:hover,
+.sort-handle:focus-visible {
+  color: #6e9386;
+  background: #e6f1ec;
+}
+.sort-handle:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: -2px;
+}
+.sort-handle:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+.sortable-row.is-dragging {
+  z-index: 2;
+  background: #f5faf8;
+  box-shadow: 0 6px 16px rgba(66, 93, 80, 0.14);
+  border-radius: 6px;
+}
+.sortable-row.is-dragging .sort-handle {
+  color: #6e9386;
+  cursor: grabbing;
+}
+.todo-list .sortable-row {
+  gap: 7px;
+}
+.todo-list .sortable-row .task-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.memo-sortable-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+.memo-sortable-row .memo-list-item {
+  flex: 1;
+  min-width: 0;
+  border-bottom: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sortable-row,
+  .sort-handle {
+    transition: none !important;
+  }
+}
 .todo-add {
   display: flex;
   align-items: center;
