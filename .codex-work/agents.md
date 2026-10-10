@@ -54,6 +54,7 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - Electron 原生通知通过 `electron/preload.cjs` 暴露的受限 `momoFocusNative.notify` API 调用，主窗口保持隔离上下文。
 - 计时开始时可通过 `momofocus.settings.floatingWindowOn` 自动打开 Electron 始终置顶浮窗；浮窗通过 `?floating=1` 路由读取 `momofocus.timer` 和任务数据，每 500ms 刷新，关闭浮窗不停止计时。
 - 正计时启动后持续计时；番茄钟专注结束自动进入休息并开始计时，休息结束停止并完成本轮。快捷键为 `Space`（暂停/继续）、`S` 或 `Escape`（放弃）。
+- 正计时（含养习惯正计时）的主界面和浮窗操作按钮显示“结束”，主界面读屏标签为“结束当前任务”；倒计时沿用原有文案，结束操作与历史记录规则沿用现有逻辑。
 - 番茄钟专注结束自动播放提示音并开始任务自定义休息；休息结束再次播放提示音并停止。声音由 `momofocus.settings` 的 `soundOn` 控制。
 - 计时快照额外保存 `sessionStartedAt`，用于暂停或重启后保持历史记录的原始日期归属。
 
@@ -96,6 +97,8 @@ MomoFocus（番茄小窝）是一个 React + Vite 前端、Electron 桌面壳的
 - 2026-09-27：修复番茄主体使用 CSS 原生拖动导致 React 悬停事件失效的问题；番茄恢复普通鼠标事件，自定义拖动通过受来源校验的主进程 IPC 执行，按住可移动，未移动的点击仍暂停/继续。`npm run format:check`、`npm run build`、`git diff --check`、Electron 主进程语法检查通过，并完成代码复核。
 
 ## 最近验证补充
+
+- 2026-10-10：将普通和养习惯正计时的主界面、浮窗按钮统一为“结束”，同步主界面读屏标签。`npm run format:check`、`npm run build`、`git diff --check` 通过；独立 `5177` 来源运行态确认普通正计时运行/暂停均显示“结束”、结束按钮可正常结束任务、养习惯正计时显示“结束”、番茄钟主界面仍显示“放弃”、浮窗按类型显示“结束”或“关闭任务”，浏览器无 error/warn。完成条件渲染、无障碍和原有计时/持久化行为 code review；独立桌面包尚未重新打包。
 
 - 2026-10-09：为右侧 Todo 与备忘录增加把手拖动排序、让位动画、边缘自动滚动和中文键盘 / 读屏支持。改动前检查点 `3bd5acd`；`npm run format:check`、`npm run build`、`git diff --check` 和排序组件独立严格 TypeScript 检查通过。独立 `5176` 测试来源运行态确认两类列表鼠标 / 键盘排序、刷新后顺序保存、Escape 取消、备忘录正文及选中状态保持、Todo 勾选 / 双击编辑 / 编辑时禁用把手；11 条 Todo 拖到底部时列表自动滚动 73px，1440px 桌面和 700px 窄窗口无横向溢出，浏览器无 error / warn。完成状态生命周期、旧数据兼容、快捷键隔离与依赖 / diff code review。额外完整源码严格类型检查仅发现改动前已存在的浮窗 `inert` React 类型声明错误（`src/App.tsx` 原第 517 行）；现有 `npm run build` 的 tsc 仅覆盖 Vite 配置，源码构建由 Vite 完成。Windows 独立桌面包尚未重新打包。
 

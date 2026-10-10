@@ -549,7 +549,7 @@ function FloatingTimer() {
             onClick={() => sendCommand("abandonTask")}
           >
             <X size={14} />
-            关闭任务
+            {task?.type === "countup" ? "结束" : "关闭任务"}
           </button>
         </div>
       </section>
@@ -2404,11 +2404,11 @@ function TimerView(props: TimerViewProps) {
                   </button>
                   <button
                     className="secondary-button abandon-button"
-                    aria-label="放弃当前任务"
+                    aria-label={isCountup ? "结束当前任务" : "放弃当前任务"}
                     onClick={abandonTask}
                   >
                     <X size={16} />
-                    放弃
+                    {isCountup ? "结束" : "放弃"}
                   </button>
                 </div>
                 <FocusHistory sessions={sessions} onDelete={deleteSession} />
